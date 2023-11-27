@@ -7,9 +7,9 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["TypedDuck <typedduck@posteo.net>"]
-homepage = "https://github.com/typedduck/docfmt"
-repository = "https://github.com/typedduck/docfmt"
-description = "A documentation formatter using Handlebars templates"
+homepage = "https://github.com/typedduck/drake"
+repository = "https://github.com/typedduck/drake"
+description = "A library to assist in the creation of an interpreter or compiler and its associated runtime."
 categories = ["parsing"]
 keywords = ["paser-combinators", "parser", "parsing"]
 readme = "README.md"
@@ -28,7 +28,6 @@ lto = "fat"
 codegen-units = 1
 
 [dependencies]
-dotenv = "0.15.0"
 log = { version = "0.4.20", features = [
     "std",
     "release_max_level_info",
