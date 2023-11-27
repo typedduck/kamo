@@ -1,0 +1,43 @@
+# See more keys and their definitions at
+# https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name = "drake"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["TypedDuck <typedduck@posteo.net>"]
+homepage = "https://github.com/typedduck/docfmt"
+repository = "https://github.com/typedduck/docfmt"
+description = "A documentation formatter using Handlebars templates"
+categories = ["parsing"]
+keywords = ["paser-combinators", "parser", "parsing"]
+readme = "README.md"
+include = [
+    "LICENSE-*",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "/src",
+]
+
+[profile.release]
+strip = "symbols"
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
+[dependencies]
+dotenv = "0.15.0"
+log = { version = "0.4.20", features = [
+    "std",
+    "release_max_level_info",
+    "max_level_trace",
+] }
+memchr = "2.6.3"
+regex = { version = "1.10.1", optional = true }
+smartstring = "1.0.1"
+unicode-ident = "1.0.12"
+
+[features]
+regex = ["dep:regex"]
