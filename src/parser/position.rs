@@ -29,7 +29,7 @@ impl Position {
     /// # Examples
     /// 
     /// ```rust
-    /// # use drake::parser::Position;
+    /// # use kamo::parser::Position;
     /// let pos = Position::new(0, 1, 1);
     /// 
     /// assert_eq!(pos.offset(), 0);

@@ -7,7 +7,7 @@ use super::CombinatorError;
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CombinatorError, code, Input, Position
 /// # };
 /// let mut parser = eof;

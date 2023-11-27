@@ -8,7 +8,7 @@ use super::CharacterError;
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, Position};
 /// let mut parser = take(3);
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(("abc", "".into())));
@@ -44,7 +44,7 @@ pub fn take(n: usize) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str> + Co
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, Position};
 /// let mut parser = take_while0(|c| c.is_ascii_digit());
 ///
 /// assert_eq!(parser.parse("123abc".into()), Ok(("123", "abc".into())));
@@ -72,7 +72,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
 /// let mut parser = take_while1(|c| c.is_ascii_digit());
 ///
 /// assert_eq!(parser.parse("123abc".into()), Ok(("123", "abc".into())));
@@ -125,7 +125,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position, Span};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position, Span};
 /// let mut parser = take_while_m_n(2, 4, |c| c.is_ascii_digit());
 ///
 /// assert_eq!(parser.parse("123abc".into()), Ok(("123", "abc".into())));

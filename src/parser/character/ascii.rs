@@ -7,7 +7,7 @@
 //! ## Example
 //!
 //! ```rust
-//! # use drake::parser::{
+//! # use kamo::parser::{
 //! #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 //! # };
 //! let (output, input) = digit1(Input::from("0123456789"))
@@ -42,7 +42,7 @@ use super::{char, CharacterError};
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = alpha0(Input::from("abc123")).expect("valid output");
 ///
 /// assert_eq!(output, "abc");
@@ -65,7 +65,7 @@ pub fn alpha0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = alpha1(Input::from("abc123")).expect("valid output");
@@ -109,7 +109,7 @@ pub fn alpha1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = alphanum0(Input::from("abc123"))
 ///     .expect("valid output");
 ///
@@ -134,7 +134,7 @@ pub fn alphanum0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = alphanum1(Input::from("abc123"))
@@ -179,7 +179,7 @@ pub fn alphanum1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = digit0(Input::from("0123456789"))
 ///     .expect("valid output");
 ///
@@ -204,7 +204,7 @@ pub fn digit0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = digit1(Input::from("0123456789"))
@@ -249,7 +249,7 @@ pub fn digit1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = bin_digit0(Input::from("0101"))
 ///     .expect("valid output");
 ///
@@ -274,7 +274,7 @@ pub fn bin_digit0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = bin_digit1(Input::from("0101"))
@@ -319,7 +319,7 @@ pub fn bin_digit1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = oct_digit0(Input::from("01234567"))
 ///     .expect("valid output");
 ///
@@ -344,7 +344,7 @@ pub fn oct_digit0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = oct_digit1(Input::from("01234567"))
@@ -389,7 +389,7 @@ pub fn oct_digit1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = hex_digit0(Input::from("0123456789abcdef"))
 ///     .expect("valid output");
 ///
@@ -414,7 +414,7 @@ pub fn hex_digit0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = hex_digit1(Input::from("0123456789abcdef"))
@@ -460,7 +460,7 @@ pub fn hex_digit1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = whitespace0(Input::from(" \t\n\r"))
 ///     .expect("valid output");
 ///
@@ -485,7 +485,7 @@ pub fn whitespace0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = whitespace1(Input::from(" \t\n\r"))
@@ -530,7 +530,7 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = space0(Input::from(" \t")).expect("valid output");
 ///
 /// assert_eq!(output, " \t");
@@ -553,7 +553,7 @@ pub fn space0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = space1(Input::from(" \t")).expect("valid output");
@@ -599,7 +599,7 @@ pub fn space1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::ascii::*, Input};
+/// # use kamo::parser::{prelude::ascii::*, Input};
 /// let (output, input) = graphic0(Input::from("abc")).expect("valid output");
 ///
 /// assert_eq!(output, "abc");
@@ -624,7 +624,7 @@ pub fn graphic0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = graphic1(Input::from("abc")).expect("valid output");
@@ -668,7 +668,7 @@ pub fn graphic1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = line_ending(Input::from("\r\n"))
@@ -737,7 +737,7 @@ pub fn line_ending(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = crlf(Input::from("\r\n")).expect("valid output");

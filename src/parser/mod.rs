@@ -56,7 +56,7 @@
 //! ### Example
 //!
 //! ```rust
-//! # use drake::parser::{Input, Position};
+//! # use kamo::parser::{Input, Position};
 //! let mut input = Input::new("abc");
 //!
 //! assert_eq!(input.current(), Some('a'));
@@ -118,7 +118,7 @@
 //! ### Example
 //! 
 //! ```rust
-//! # use drake::parser::{prelude::*, Input};
+//! # use kamo::parser::{prelude::*, Input};
 //! /// Parses a string of zero or more digits.
 //! fn digits(input: Input) -> ParseResult<&str> {
 //!     let mut input = input;
@@ -171,7 +171,7 @@
 //! ### Example
 //!
 //! ```rust
-//! # use drake::parser::{
+//! # use kamo::parser::{
 //! #     prelude::*, CharacterError, code, Input, Position
 //! # };
 //! /// Parses a string of digits.
@@ -203,7 +203,7 @@
 //! matches the tag.
 //!
 //! ```rust
-//! # use drake::parser::{
+//! # use kamo::parser::{
 //! #    prelude::*, CharacterError, code, Input, Position
 //! # };
 //! /// Parses a tag.
@@ -293,7 +293,7 @@ pub type ParseResult<'a, O> = StdResult<(O, Input<'a>), ParseError>;
 /// used with the `use` keyword to import the parsers into the current scope.
 ///
 /// ```ignore
-/// use drake::parser::prelude::*;
+/// use kamo::parser::prelude::*;
 /// ```
 pub mod prelude {
     #[cfg(feature = "regex")]
@@ -318,7 +318,7 @@ pub mod prelude {
 }
 
 /// The target passed to the logger.
-pub const TARGET: &str = "drake::parser";
+pub const TARGET: &str = "kamo::parser";
 
 /// A trait defining a parser.
 ///

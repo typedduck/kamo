@@ -9,7 +9,7 @@
 /// must do actual progress.
 /// 
 /// ```rust
-/// # use drake::{
+/// # use kamo::{
 /// #     infinite_loop_check,
 /// #     parser::{
 /// #         prelude::*, SequenceError, code, Input, Position, Span

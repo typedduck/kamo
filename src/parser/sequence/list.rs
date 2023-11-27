@@ -34,7 +34,7 @@ macro_rules! list_loop {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = list0(char('a'), char(','));
@@ -83,7 +83,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = list1(char('a'), char(','));
@@ -142,7 +142,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = list_m_n(1, 2, tag("let"), char(','));

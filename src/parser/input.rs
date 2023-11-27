@@ -45,7 +45,7 @@ impl<'a> Input<'a> {
     /// Return the current character or `None` if end of input is reached.
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
     /// 
     /// assert_eq!(input.current(), Some('a'));
@@ -64,7 +64,7 @@ impl<'a> Input<'a> {
     /// Return the current position
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
     /// 
     /// assert_eq!(input.position().offset(), 0);
@@ -85,7 +85,7 @@ impl<'a> Input<'a> {
     /// Return if the current position marks a newline.
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc\n123");
     /// 
     /// assert!(!input.newline());
@@ -104,7 +104,7 @@ impl<'a> Input<'a> {
     /// charater is the current. Returns `None` if end of input is reached.
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
     /// 
     /// assert_eq!(input.advance(), Some('b'));
@@ -155,7 +155,7 @@ impl<'a> Input<'a> {
     /// function was called.
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
     /// 
     /// assert_eq!(input.advance_tag("abc"), Some(true));
@@ -197,7 +197,7 @@ impl<'a> Input<'a> {
     /// # Example
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// # use regex::Regex;
     /// let mut input = Input::new("abc");
     /// 
@@ -228,7 +228,7 @@ impl<'a> Input<'a> {
     /// otherwise. Returns `None` if end of input is reached.
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
     /// 
     /// assert_eq!(input.advance_if(|c| c.is_ascii_alphabetic()), Some(true));
@@ -259,7 +259,7 @@ impl<'a> Input<'a> {
     /// zero length.
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc\n123");
     /// 
     /// assert_eq!(input.advance_while(|c| c.is_ascii_alphabetic()), "abc");
@@ -295,7 +295,7 @@ impl<'a> Input<'a> {
     /// called.
     /// 
     /// ```rust
-    /// # use drake::parser::Input;
+    /// # use kamo::parser::Input;
     /// let mut input = Input::new("123\nabc|");
     /// 
     /// assert_eq!(input.advance_until(|c| c == '\n'), Some("123"));

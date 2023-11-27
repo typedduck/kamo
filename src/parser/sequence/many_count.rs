@@ -11,7 +11,7 @@ use super::SequenceError;
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = many0_count(char('a'));
@@ -50,7 +50,7 @@ where
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = many1_count(char('a'));
@@ -106,7 +106,7 @@ where
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = many_m_n_count(2, 3, char('a'));

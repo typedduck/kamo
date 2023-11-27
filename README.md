@@ -1,8 +1,9 @@
-# Drake
+# Kamo
 
-This is the release of the first module of the Drake project.
+This is the release of the first module of the Kamo project. Kamo (カモ) ist
+japanese for duck.
 
-## Parser Combinator Library `drake::parser`
+## Parser Combinator Library `kamo::parser`
 
 This module implements a parser combinator library. The library is focused
 on parsing UTF-8 text in a safe and mostly zero-copy way. It is designed to
@@ -34,7 +35,7 @@ Byte       = <any exact integer between 0 and 255>
 The parser is defined as follows:
 
 ```rust
-use drake::parser::{code, prelude::*, Input, ParseError, ParseResult, Span};
+use kamo::parser::{code, prelude::*, Input, ParseError, ParseResult, Span};
 
 fn main() {
     assert_eq!(
@@ -118,24 +119,24 @@ fn parse_natural(input: Input<'_>) -> ParseResult<u64> {
 
 ## Feature List
 
-- [x] Module `drake::parser` for parsing UTF-8 text. A parser combinator
+- [x] Module `kamo::parser` for parsing UTF-8 text. A parser combinator
     library for parsing UTF-8 text in a safe and mostly zero-copy way.
-- [ ] Module `drake::mem` for automatic memory management. Values are allocated
+- [ ] Module `kamo::mem` for automatic memory management. Values are allocated
     in a mutator which holds an arena allocator for each type. Memory collection
     is done by a mark and sweep garbage collector.
-- [ ] Module `drake::value` for values. Values can either hold immediate values
+- [ ] Module `kamo::value` for values. Values can either hold immediate values
     or pointers to values allocated in the mutator.
-- [ ] Module `drake::eval` for evaluation. The evaluator processes an AST, which
+- [ ] Module `kamo::eval` for evaluation. The evaluator processes an AST, which
     is an symbolic expression tree, and evaluates it to an intermediate
     representation. The intermediate representation can then be interpreted or
     compiled to a target representation. The interpreter is generic and can be
     used to interpret any intermediate representation.
-- [ ] Module `drake::types` for types. The type system is used to infer the
+- [ ] Module `kamo::types` for types. The type system is used to infer the
     types of the intermediate representation and the AST.
-- [ ] Module `drake::repl` for a read-eval-print-loop. The REPL is used to
+- [ ] Module `kamo::repl` for a read-eval-print-loop. The REPL is used to
     interactively evaluate expressions and is generic and can be used to
     evaluate any intermediate representation.
-- [ ] Module `drake::lang::scheme` for the Scheme language. The Scheme language
-    is implemented as a library on top of the `drake` modules. It implements the
+- [ ] Module `kamo::lang::scheme` for the Scheme language. The Scheme language
+    is implemented as a library on top of the `kamo` modules. It implements the
     a subset of the R7RS standard.
 

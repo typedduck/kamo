@@ -13,7 +13,7 @@ use super::{
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, code, Input, Position};
+/// # use kamo::parser::{prelude::*, code, Input, Position};
 /// let mut parser = context(tag("hello"), "Expected `hello`");
 ///
 /// assert_eq!(parser.parse("hello world".into()),
@@ -49,7 +49,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, code, Input, Position};
+/// # use kamo::parser::{prelude::*, code, Input, Position};
 /// let mut parser = context_as(tag("hello"), code::ERR_TAG, "Expected `hello`");
 ///
 /// assert_eq!(parser.parse("hello world".into()),
@@ -89,7 +89,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, code, Input, Position};
+/// # use kamo::parser::{prelude::*, code, Input, Position};
 /// let mut parser = context_and(tag("hello"), |err| {
 ///     (code::ERR_TAG, "Expected `hello`".into())
 /// });

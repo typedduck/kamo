@@ -5,7 +5,7 @@ use crate::parser::{Input, Parser, ParseResult};
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{prelude::*, Input};
+/// # use kamo::parser::{prelude::*, Input};
 /// let mut parser = opt(char('a'));
 /// 
 /// assert_eq!(parser.parse("abc".into()), Ok((Some('a'), Input::from("bc"))));

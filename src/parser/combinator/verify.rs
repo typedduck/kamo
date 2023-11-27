@@ -9,7 +9,7 @@ use super::CombinatorError;
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, code, CombinatorError, CharacterError, Input, Position
 /// # };
 /// let digit = literal::Radix::Decimal.one_digit();

@@ -8,7 +8,7 @@ use super::CombinatorError;
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{prelude::*, CombinatorError, code, Input, Position};
+/// # use kamo::parser::{prelude::*, CombinatorError, code, Input, Position};
 /// let mut parser = recognize(delimited(char('('), tag("foo"), char(')')));
 /// 
 /// assert_eq!(parser.parse("(foo)bar".into()),

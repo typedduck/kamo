@@ -7,7 +7,7 @@ use crate::parser::{Input, Parser, ParseResult};
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, code, CharacterError, Input, Position
 /// # };
 /// let mut parser = map(char('a'), |c| c as u8);

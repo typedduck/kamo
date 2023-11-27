@@ -7,7 +7,7 @@
 //! ## Example
 //!
 //! ```rust
-//! # use drake::parser::{prelude::{*, unicode::*}, Input};
+//! # use kamo::parser::{prelude::{*, unicode::*}, Input};
 //! let (output, input) = alpha0(Input::from("abc京123"))
 //!     .expect("valid output");
 //!
@@ -30,7 +30,7 @@ use super::CharacterError;
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::{*, unicode::*}, Input};
+/// # use kamo::parser::{prelude::{*, unicode::*}, Input};
 /// let (output, input) = alpha0(Input::from("abc京123"))
 ///     .expect("valid output");
 ///
@@ -55,7 +55,7 @@ pub fn alpha0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = alpha1(Input::from("abc京123"))
@@ -100,7 +100,7 @@ pub fn alpha1(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::{*, unicode::*}, Input};
+/// # use kamo::parser::{prelude::{*, unicode::*}, Input};
 /// let (output, input) = alphanum0(Input::from("abc京123"))
 ///     .expect("valid output");
 ///
@@ -125,7 +125,7 @@ pub fn alphanum0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = alphanum1(Input::from("abc京123"))
@@ -170,7 +170,7 @@ pub fn alphanum1(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::{*, unicode::*}, Input};
+/// # use kamo::parser::{prelude::{*, unicode::*}, Input};
 /// let (output, input) = numeric0(Input::from("abc京123"))
 ///     .expect("valid output");
 ///
@@ -195,7 +195,7 @@ pub fn numeric0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = numeric1(Input::from("123abc京"))
@@ -240,7 +240,7 @@ pub fn numeric1(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::{*, unicode::*}, Input};
+/// # use kamo::parser::{prelude::{*, unicode::*}, Input};
 /// let (output, input) = lowercase0(Input::from("abc京123"))
 ///     .expect("valid output");
 ///
@@ -265,7 +265,7 @@ pub fn lowercase0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = lowercase1(Input::from("abc京123"))
@@ -313,7 +313,7 @@ pub fn lowercase1(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::{*, unicode::*}, Input};
+/// # use kamo::parser::{prelude::{*, unicode::*}, Input};
 /// let (output, input) = uppercase0(Input::from("ABC京123"))
 ///     .expect("valid output");
 ///
@@ -338,7 +338,7 @@ pub fn uppercase0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = uppercase1(Input::from("ABC京123"))
@@ -386,7 +386,7 @@ pub fn uppercase1(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::{*, unicode::*}, Input};
+/// # use kamo::parser::{prelude::{*, unicode::*}, Input};
 /// let (output, input) = whitespace0(Input::from(" \t\n\u{a0}abc京123"))
 ///     .expect("valid output");
 ///
@@ -411,7 +411,7 @@ pub fn whitespace0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = whitespace1(Input::from(" \t\n\u{a0}abc京123"))
@@ -470,7 +470,7 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = ident_start(Input::from("京abc123"))
@@ -543,7 +543,7 @@ pub fn ident_start(input: Input<'_>) -> ParseResult<char> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 /// let (output, input) = ident_start_or(|ch| ch == '_')
@@ -620,7 +620,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 ///
@@ -663,7 +663,7 @@ pub fn ident_cont(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
 /// # };
 ///

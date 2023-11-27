@@ -155,7 +155,7 @@ tuple_impl!(1: out2, O2, F2; 2: out3, O3, F3; 3: out4, O4, F4; 4: out5, O5, F5; 
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = tuple((char('a'), char('b')));

@@ -9,7 +9,7 @@ use super::CharacterError;
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, code, Input, Position
 /// # };
 /// # use regex::Regex;

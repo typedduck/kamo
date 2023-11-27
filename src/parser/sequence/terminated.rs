@@ -8,7 +8,7 @@ use super::SequenceError;
 /// # Examples
 /// 
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = terminated(tag("let"), char(')'));

@@ -16,7 +16,7 @@ use super::SequenceError;
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = fold_many0(tag("let"), || 0, |acc, _, _| acc + 1);
@@ -67,7 +67,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = fold_many1(tag("let"), || 0, |acc, _, _| acc + 1);
@@ -136,7 +136,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = fold_many_m_n(2, 3, tag("let"), || 0, |acc, _, _| acc + 1);

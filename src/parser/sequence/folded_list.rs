@@ -40,7 +40,7 @@ macro_rules! list_fold {
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = fold_list0(tag("let"), char(','),
@@ -105,7 +105,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = fold_list1(tag("let"), char(','),
@@ -182,7 +182,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use drake::parser::{
+/// # use kamo::parser::{
 /// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
 /// # };
 /// let mut parser = fold_list_m_n(1, 2, tag("let"), char(','),

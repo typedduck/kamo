@@ -10,7 +10,7 @@ use super::CharacterError;
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
 /// let mut parser = satisfy(|ch| ch.is_ascii_alphabetic());
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
@@ -49,7 +49,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
 /// let mut parser = any_char;
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
@@ -72,7 +72,7 @@ pub fn any_char(input: Input<'_>) -> ParseResult<char> {
 /// # Example
 ///
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
 /// let mut parser = char('a');
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
@@ -101,7 +101,7 @@ pub const fn char(value: char) -> impl Fn(Input) -> ParseResult<char> + Copy {
 /// # Example
 /// 
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
 /// let mut parser = tag("abc");
 /// 
 /// assert_eq!(parser.parse("abc".into()), Ok(("abc", "".into())));
@@ -148,7 +148,7 @@ pub fn tag(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a,
 /// # Example
 /// 
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
 /// let mut parser = none_of("abc");
 /// 
 /// assert_eq!(parser.parse("def".into()), Ok(('d', "ef".into())));
@@ -186,7 +186,7 @@ pub fn none_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResul
 /// # Example
 /// 
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
 /// let mut parser = one_of("abc");
 /// 
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
@@ -227,7 +227,7 @@ pub fn one_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult
 /// # Example
 /// 
 /// ```rust
-/// # use drake::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
 /// let mut parser = is_not("abc");
 /// 
 /// assert_eq!(parser.parse("defa".into()), Ok(("def", "a".into())));
