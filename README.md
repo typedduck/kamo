@@ -1,6 +1,10 @@
 # Kamo
 
-This is the release of the first module of the Kamo project. Kamo (カモ) ist
+![Build Status](https://img.shields.io/github/actions/workflow/status/typedduck/kamo/rust.yml)
+[![Crates.io](https://img.shields.io/crates/v/kamo)](https://crates.io/crates/kamo)
+[![Crates.io](https://img.shields.io/crates/d/kamo)](https://crates.io/crates/kamo)
+
+This is the release of the first module of the Kamo project. Kamo (カモ) is
 japanese for duck.
 
 ## Parser Combinator Library `kamo::parser`
@@ -137,6 +141,6 @@ fn parse_natural(input: Input<'_>) -> ParseResult<u64> {
     interactively evaluate expressions and is generic and can be used to
     evaluate any intermediate representation.
 - [ ] Module `kamo::lang::scheme` for the Scheme language. The Scheme language
-    is implemented as a library on top of the `kamo` modules. It implements the
-    a subset of the R7RS standard.
+    is implemented as a library on top of the `kamo` modules. It implements a
+    subset of the R7RS standard.
 

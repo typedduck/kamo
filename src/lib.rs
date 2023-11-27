@@ -139,8 +139,8 @@
 //! interactively evaluate expressions and is generic and can be used to
 //! evaluate any intermediate representation.
 //! - [ ] Module `kamo::lang::scheme` for the Scheme language. The Scheme language
-//! is implemented as a library on top of the `kamo` modules. It implements the
-//! a subset of the R7RS standard.
+//! is implemented as a library on top of the `kamo` modules. It implements a
+//! subset of the R7RS standard.
 
 
 pub mod parser;
