@@ -1,4 +1,3 @@
-
 //! # The parser module provides a parser combinator library.
 //!
 //! This module implements a parser combinator library. The library is focused
@@ -274,12 +273,12 @@ use std::result::Result as StdResult;
 /// The result of a call to a parser. The result is either an `Ok` containing
 /// the output of the parser and the remaining input, or an `Err` containing the
 /// error that occurred.
-/// 
+///
 /// The result is only generic over the output type. This makes this library to
 /// be used for different kind of outputs and not only for ASTs. The output type
 /// can be a string slice, a string, a number, a boolean, a tuple, a struct or
 /// an enum. There are no restrictions on the output type.
-/// 
+///
 /// The result is defined as a type alias for [`std::result::Result`] with the
 /// error type set to [`ParseError`]. This and the constraint on the input type
 /// simplifies the implementation of the parser combinators. But also
@@ -305,8 +304,8 @@ pub mod prelude {
             any_char, ascii, char, is_not, none_of, one_of, satisfy, tag, take, take_while0,
             take_while1, take_while_m_n, unicode,
         },
-        combinator::{eof, map, opt, recognize, value, verify},
-        error::{context, context_as, context_and},
+        combinator::{eof, map, map2, opt, recognize, value, verify},
+        error::{context, context_and, context_as},
         literal,
         sequence::{
             delimited, fold_list0, fold_list1, fold_list_m_n, fold_many0, fold_many1,
@@ -358,5 +357,90 @@ where
     #[inline]
     fn parse(&mut self, input: Input<'a>) -> ParseResult<'a, O> {
         self.as_mut().parse(input)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::parser::{code, prelude::*, Input, ParseError, ParseResult, Span};
+
+    #[test]
+    fn bytevec_example() {
+        assert_eq!(
+            parse_bytevec(Input::new("#u8(0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)")),
+            Ok((
+                vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+                Input::new("")
+            ))
+        );
+    }
+
+    fn parse_bytevec(input: Input<'_>) -> ParseResult<'_, Vec<u8>> {
+        context_as(
+            delimited(
+                pair(tag("#u8("), ascii::whitespace0),
+                list0(parse_bytevec_value, ascii::whitespace1),
+                context_as(
+                    preceded(ascii::whitespace0, char(')')),
+                    code::ERR_CUSTOM + 2,
+                    "expecting a closing parenthesis: )",
+                ),
+            ),
+            code::ERR_CUSTOM + 1,
+            "expecting a byte vector: #u8(<byte>*)",
+        )(input)
+    }
+
+    fn parse_bytevec_value(input: Input<'_>) -> ParseResult<'_, u8> {
+        let result = preceded(
+            ascii::whitespace0,
+            any((
+                parse_binary_natural,
+                parse_octal_natural,
+                parse_decimal_natural,
+                parse_hexadecimal_natural,
+                parse_natural,
+            )),
+        )(input);
+
+        match result {
+            Ok((value, cursor)) => {
+                if value > u8::MAX as u64 {
+                    Err(ParseError::new(
+                        Span::new(input.position(), cursor.position()),
+                        code::ERR_CUSTOM + 3,
+                        "expecting a byte value: 0..255",
+                    ))
+                } else {
+                    Ok((value as u8, cursor))
+                }
+            }
+            Err(err) => Err(err),
+        }
+    }
+
+    #[inline]
+    fn parse_binary_natural(input: Input<'_>) -> ParseResult<u64> {
+        preceded(tag("#b"), literal::natural(literal::Radix::Binary))(input)
+    }
+
+    #[inline]
+    fn parse_octal_natural(input: Input<'_>) -> ParseResult<u64> {
+        preceded(tag("#o"), literal::natural(literal::Radix::Octal))(input)
+    }
+
+    #[inline]
+    fn parse_decimal_natural(input: Input<'_>) -> ParseResult<u64> {
+        preceded(tag("#d"), parse_natural)(input)
+    }
+
+    #[inline]
+    fn parse_hexadecimal_natural(input: Input<'_>) -> ParseResult<u64> {
+        preceded(tag("#x"), literal::natural(literal::Radix::Hexadecimal))(input)
+    }
+
+    #[inline]
+    fn parse_natural(input: Input<'_>) -> ParseResult<u64> {
+        literal::natural(literal::Radix::Decimal)(input)
     }
 }
