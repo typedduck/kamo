@@ -1,4 +1,4 @@
-//! # The parser module provides a parser combinator library.
+//! # Parser combinator library.
 //!
 //! This module implements a parser combinator library. The library is focused
 //! on parsing UTF-8 text in a safe and mostly zero-copy way. It is designed to

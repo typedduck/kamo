@@ -1,4 +1,3 @@
-use log::{debug, trace};
 #[cfg(feature = "regex")]
 use regex::Regex;
 
@@ -38,7 +37,7 @@ impl<'a> Input<'a> {
             (None, Position::new(0, 1, 1), false)
         };
 
-        debug!(target: TARGET, "Input: new input {:#}: {:?}", current.1, input);
+        log::debug!(target: TARGET, "Input: new input {:#}: {:?}", current.1, input);
         Self { input, current }
     }
 
@@ -131,7 +130,7 @@ impl<'a> Input<'a> {
                 *curr_ch = Some(next_ch);
                 *newline = next_ch == '\n';
                 pos.offset += offset as u32;
-                trace!(target: TARGET, "input: {:#}: {:?}", pos, next_ch);
+                log::trace!(target: TARGET, "input: {:#}: {:?}", pos, next_ch);
                 return Some(next_ch);
             } else {
                 let (ch, pos, _) = &mut self.current;
@@ -143,7 +142,7 @@ impl<'a> Input<'a> {
                 pos.offset += offset as u32;
             }
         }
-        debug!(target: TARGET, "Input: {:#}: reached end of input", self.current.1);
+        log::debug!(target: TARGET, "Input: {:#}: reached end of input", self.current.1);
         None
     }
 
