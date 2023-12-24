@@ -16,9 +16,7 @@ keywords = [
     "parser",
     "parsing",
     "memory-management",
-    "data-structures",
     "garbage-collection",
-    "gc",
 ]
 readme = "README.md"
 include = ["LICENSE-*", "README.md", "CHANGELOG.md", "Cargo.toml", "/src"]
