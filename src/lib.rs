@@ -1,17 +1,128 @@
 //! A library to assist in the creation of an interpreter or compiler and its
 //! associated runtime.
 //! 
-//! This is the release of the first module of the Kamo project. This crate
-//! contains the parser library. It is a general purpose parser library that
-//! can be used to parse any language. It is designed to be used in conjunction
-//! with the future parts of this project, but it can also be used on its own.
+//! This is the second release of the Kamo project. This crate contains the
+//! parser library and the memory management library, which also includes the
+//! runtime representation of values.
+//! 
+//! ## Memory Management
+//! 
+//! The [`Mutator`](crate::mem::Mutator) implements automatic memory management.
+//! It holds an [`Arena`](crate::mem::Arena) for each type. Memory collection is
+//! done by a mark and sweep garbage collector.
+//! 
+//! The mutator implementation is thread local. The arena allocator is
+//! implemented as a vector of [`Bucket`](crate::mem::Bucket)s. Each bucket
+//! holds a vector of [`Slot`](crate::mem::Slot)s. The slots are used to store
+//! the values. Buckets have a fixed size and are allocated on the heap. The
+//! buckets are allocated on demand when the slots are full.
+//! 
+//! The hierarchy of types is as follows:
+//! 
+//! * Mutator contains Arenas.
+//! * Arena contains Buckets.
+//! * Bucket contains Slots.
+//! * Slot contains a value.
+//! * a value is represented by a Pointer.
+//! 
+//! Values managed by the mutator must be traceable. The mutator uses the
+//! [`Trace`](crate::mem::Trace) trait to trace the values. The `Trace` trait is
+//! implemented for all types that can contain values managed by the mutator.
+//! 
+//! [`Pointer`](crate::mem::Pointer)s use reference counting to keep track of
+//! the number of references to the value. When the number of references reaches
+//! zero the value may be subject to garbage collection. To avoid cycles
+//! [`Pair`](crate::value::Pair)s, also known as `Cons` cells, and
+//! [`Vector`](crate::value::Vector)s do not hold locks to their elements.
+//! Instead they are traced by the mutator when memory collection is done. This
+//! is the reason why a drop of the reference count of a pointer to zero does
+//! not immediately free the value.
+//! 
+//! The garbage collector is implemented as a mark and sweep collector,
+//! [`collect_garbage()`](crate::mem::Mutator::collect_garbage()). All values
+//! which hold a lock are roots. The garbage collector traces all roots and
+//! marks all values that are reachable from the roots. All values that are not
+//! marked are unreachable and are freed. Tracing is done iteratively by
+//! repeatedly calling the [`trace()`](crate::mem::Trace::trace()) method on the
+//! values and adding the values to a work list. This continues until the work
+//! list is empty.
+//! 
+//! ### `Allocator` Trait
+//! 
+//! The mutator uses the global allocator to allocate memory for buckets,
+//! arenas, vectors and strings etc. Dynamic memory allocation is done by the
+//! allocator provided by the [`std::alloc`] crate. Since the implementation of
+//! the allocator provided by the standard library is highly optimized it would
+//! be a waste of effort to reimplement it.
+//! 
+//! As a consequence the mutator is not able to free memory when the global
+//! allocator fails to allocate memory. This is because the mutator does not
+//! know which memory is allocated by the global allocator. The mutator only
+//! knows which memory is allocated by its arenas. Collection of memory is
+//! triggered only by the allocation pressure. 
+//! 
+//! When the allocator trait is stabilized the mutator will be able to use the
+//! the trait to mitigate allocation failures by freeing memory when the global
+//! allocator fails.
+//! 
+//! ## Runtime Values
+//! 
+//! [`Value`](crate::value::Value)s can either hold immediate values or pointers
+//! to values allocated in the mutator.
+//! 
+//! The following immediate values are supported:
+//! 
+//! * `nil`, the empty list
+//! * `bool`
+//! * `char`, a Unicode scalar value
+//! * `i64`
+//! * `f64`
+//! 
+//! The following pointer values are supported:
+//! 
+//! * `pair`, a pair of values, also known as `Cons` cell
+//! * `symbol`, a symbol, an interned string
+//! * `string`, a UTF-8 string
+//! * `vector`, a vector of values
+//! * `bytevector`, a vector of bytes
+//! 
+//! Value provides a safe interface to the values in the runtime. It is
+//! implemented as a wrapper around [`ValueKind`](crate::value::ValueKind). It
+//! provides methods to convert the value into a Rust type, to check the type of
+//! the value, and to visit the value. Heap values are automatically locked and
+//! unlocked when necessary.
+//! 
+//! Value implements the visitor pattern. The [`Visitor`](crate::value::Visitor)
+//! trait is used to visit the value. When implementing the `Visitor` trait it
+//! must be considered that the value may be cyclic. The visitor must keep track
+//! of the values it has already visited to avoid infinite loops.
+//! 
+//! The `Visitor` trait is used to implement printing of values. The `Value`
+//! itself does not implement printing. Instead the
+//! [`Display`](std::fmt::Display) trait is implemented for a specific vistor.
+//! This makes it possible to implement different printing strategies for
+//! values.
+//! 
+//! An implementation of the `Visitor` trait is provided to print values in a
+//! Scheme-like syntax,
+//! [`SimplePrinterVisitor`](crate::value::SimplePrinterVisitor).
+//! 
+//! ## Combination Parser
+//! 
+//! The parser library is a general purpose parser library that can be used to
+//! parse any language. It is designed to be used in conjunction with the future
+//! parts of this project, but it can also be used on its own.
+//! 
+//! The memory management library is a library for automatic memory management.
+//! Values are allocated in a mutator which holds an arena allocator for each
+//! type. Memory collection is done by a mark and sweep garbage collector.
 //! 
 //! The future parts of this project will extend this crate with a library for
-//! automatic memory management, compile time evaluation and transformation into
-//! an intermediate representation, an implemenation of an interpreter for the
-//! intermediate representation, and a reference implementation of Scheme.The
-//! implementation will be based on the R7RS standard and will implement a
-//! subset of the standard.
+//! compile time evaluation and transformation into an intermediate
+//! representation, an implemenation of an interpreter for the intermediate
+//! representation, and a reference implementation of Scheme. The implementation
+//! will be based on the R7RS standard and will implement a subset of the
+//! standard.
 //! 
 //! The design goal of this project is to create a framework that can be used to
 //! create a language interpreter or compiler. AST nodes will be created by the
@@ -22,7 +133,7 @@
 //! program. The intermediate representation can then be either interpreted or
 //! compiled into a target representation.
 //! 
-//! # Example
+//! # Parser Example
 //! 
 //! Example of a parser that parses a Scheme-like byte-vector and returns it as
 //! `Vec<u8>`.
@@ -123,10 +234,10 @@
 //! 
 //! - [x] Module `kamo::parser` for parsing UTF-8 text. A parser combinator
 //! library for parsing UTF-8 text in a safe and mostly zero-copy way.
-//! - [ ] Module `kamo::mem` for automatic memory management. Values are allocated
+//! - [x] Module `kamo::mem` for automatic memory management. Values are allocated
 //! in a mutator which holds an arena allocator for each type. Memory collection
 //! is done by a mark and sweep garbage collector.
-//! - [ ] Module `kamo::value` for values. Values can either hold immediate values
+//! - [x] Module `kamo::value` for values. Values can either hold immediate values
 //! or pointers to values allocated in the mutator.
 //! - [ ] Module `kamo::eval` for evaluation. The evaluator processes an AST, which
 //! is an symbolic expression tree, and evaluates it to an intermediate
@@ -142,5 +253,6 @@
 //! is implemented as a library on top of the `kamo` modules. It implements a
 //! subset of the R7RS standard.
 
-
+pub mod mem;
 pub mod parser;
+pub mod value;
