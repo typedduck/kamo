@@ -2,7 +2,7 @@ use std::{hash, ptr::NonNull};
 
 use crate::{mem::Slot, value::SmartString};
 
-use super::{Pair, ValueTag, Vector};
+use super::{Pair, ValueTag, Vector, ByteVector};
 
 /// The `ValueKind` enum represents the different kinds of values that can be
 /// stored in a [`Value`](super). It is the inner part of the `Value` struct and
@@ -87,7 +87,7 @@ pub enum ValueKind<'a> {
     /// symbol.
     Symbol(bool, NonNull<Slot<Box<str>>>),
     /// A bytevector.
-    Bytevec(bool, NonNull<Slot<Vec<u8>>>),
+    Bytevec(bool, NonNull<Slot<ByteVector>>),
     /// A vector.
     Vector(bool, NonNull<Slot<Vector<'a>>>),
 }

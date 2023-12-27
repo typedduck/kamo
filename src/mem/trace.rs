@@ -1,6 +1,6 @@
 use std::ptr::NonNull;
 
-use crate::value::{Pair, SmartString, Vector};
+use crate::value::{Pair, SmartString, Vector, ByteVector};
 
 use super::Slot;
 
@@ -48,9 +48,9 @@ impl<'a> Trace<'a> for Box<str> {
     fn trace(&self, _: &mut Vec<Root<'a>>) {}
 }
 
-/// Implements [`Trace`](crate::mem::Trace) for [`Vec<u8>`]. Since a [`Vec<u8>`]
-/// does not contain any traceable values, this is a no-op.
-impl<'a> Trace<'a> for Vec<u8> {
+/// Implements [`Trace`](crate::mem::Trace) for [`ByteVector`]. Since a
+/// [`ByteVector`] does not contain any traceable values, this is a no-op.
+impl<'a> Trace<'a> for ByteVector {
     #[inline]
     fn trace(&self, _: &mut Vec<Root<'a>>) {}
 }

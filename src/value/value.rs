@@ -5,7 +5,7 @@ use crate::{
     value::SmartString,
 };
 
-use super::{Pair, ValueId, ValueKind, ValueTag, Vector, Visitor};
+use super::{Pair, ValueId, ValueKind, ValueTag, Vector, Visitor, ByteVector};
 
 /// A value in the Kamo runtime. This is a wrapper around [`ValueKind`].
 /// 
@@ -86,8 +86,8 @@ impl<'a> Value<'a> {
 
     /// Creates a new byte-vector.
     #[inline]
-    pub fn new_bytevec(m: MutatorRef<'a>, bytevec: impl Into<Vec<u8>>) -> Self {
-        let bytevec = m.borrow_mut().new_bytevec(bytevec.into());
+    pub fn new_bytevec(m: MutatorRef<'a>, bytevec: impl AsRef<[u8]>) -> Self {
+        let bytevec = m.borrow_mut().new_bytevec(bytevec);
         bytevec.into()
     }
 
@@ -426,19 +426,19 @@ impl<'a> Value<'a> {
         }
     }
 
-    /// If the value is a byte-vector, returns it as a mutable `&mut Vec<u8>`.
-    /// Otherwise, returns `None`.
+    /// If the value is a byte-vector, returns it as a mutable
+    /// `&mut ByteVector`. Otherwise, returns `None`.
     #[inline]
-    pub fn as_bytevec_mut(&mut self) -> Option<&mut Vec<u8>> {
+    pub fn as_bytevec_mut(&mut self) -> Option<&mut ByteVector> {
         match self.inner {
             ValueKind::Bytevec(_, mut ptr) => unsafe { ptr.as_mut() }.value_mut(),
             _ => None,
         }
     }
 
-    /// If the value is a byte-vector, returns it as a `Pointer<'a, Vec<u8>>`.
-    /// Otherwise, returns `None`.
-    pub fn as_bytevec_ptr(&self) -> Option<Pointer<'a, Vec<u8>>> {
+    /// If the value is a byte-vector, returns it as a
+    /// `Pointer<'a, ByteVector>`. Otherwise, returns `None`.
+    pub fn as_bytevec_ptr(&self) -> Option<Pointer<'a, ByteVector>> {
         match self.inner {
             ValueKind::Bytevec(_, ptr) => Some(ptr.into()),
             _ => None,
@@ -814,8 +814,8 @@ impl<'a> From<Pointer<'a, SmartString>> for Value<'a> {
     }
 }
 
-impl<'a> From<Pointer<'a, Vec<u8>>> for Value<'a> {
-    fn from(ptr: Pointer<'a, Vec<u8>>) -> Self {
+impl<'a> From<Pointer<'a, ByteVector>> for Value<'a> {
+    fn from(ptr: Pointer<'a, ByteVector>) -> Self {
         let ptr = NonNull::new(unsafe { ptr.into_raw() }).expect("null-pointer");
         Self::new(ValueKind::Bytevec(true, ptr))
     }

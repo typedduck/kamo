@@ -5,7 +5,7 @@ use std::{
     ptr::NonNull,
 };
 
-use crate::value::{Pair, SmartString, ValueId, Vector};
+use crate::value::{Pair, SmartString, ValueId, Vector, ByteVector};
 
 use super::{Mutator, Root, Slot, Trace};
 
@@ -162,7 +162,7 @@ impl<'a> Pointer<'a, Box<str>> {
     }
 }
 
-impl<'a> Pointer<'a, Vec<u8>> {
+impl<'a> Pointer<'a, ByteVector> {
     /// Returns the identifier of the value pointed to by this pointer.
     #[inline]
     pub fn id(&self) -> ValueId {
@@ -297,8 +297,8 @@ impl<'a> From<NonNull<Slot<Box<str>>>> for Pointer<'a, Box<str>> {
     }
 }
 
-impl<'a> From<NonNull<Slot<Vec<u8>>>> for Pointer<'a, Vec<u8>> {
-    /// Creates a new pointer to the given [`NonNull<Slot<Vec<u8>>>`](Slot)
+impl<'a> From<NonNull<Slot<ByteVector>>> for Pointer<'a, ByteVector> {
+    /// Creates a new pointer to the given [`NonNull<Slot<ByteVector>>`](Slot)
     /// pointer and locks the entry.
     ///
     /// # Panics
@@ -307,7 +307,7 @@ impl<'a> From<NonNull<Slot<Vec<u8>>>> for Pointer<'a, Vec<u8>> {
     /// unoccupied. It is the responsibility of the caller to ensure that the
     /// entry is occupied.
     #[inline]
-    fn from(ptr: NonNull<Slot<Vec<u8>>>) -> Self {
+    fn from(ptr: NonNull<Slot<ByteVector>>) -> Self {
         Self::new(ptr)
     }
 }

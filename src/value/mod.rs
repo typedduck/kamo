@@ -149,5 +149,14 @@ pub use visitor::Visitor;
 /// the string lazily, which means that the string is only expanded when it is
 /// necessary. But when it is once expanded, it will never be compacted again.
 ///
-/// [`SmartString<LazyCompact>`]: https://docs.rs/smartstring/0.2.6/smartstring/struct.SmartString.html
+/// [`SmartString<LazyCompact>`]: <https://docs.rs/smartstring/1.0.1/smartstring/struct.SmartString.html>
 pub type SmartString = smartstring::SmartString<smartstring::LazyCompact>;
+
+/// A type alias for [`SmallVec<u8; 16>`].
+/// 
+/// Byte vectors are used to store byte vectors in the value type. This is to
+/// reduce memory allocations and improve performance. The small vector variant
+/// stores the first 16 bytes inline. This is enough for most byte vectors.
+/// 
+/// [`SmallVec<u8; 16>`]: <https://docs.rs/smallvec/1.11.2/smallvec/struct.SmallVec.html>
+pub type ByteVector = smallvec::SmallVec<[u8; 16]>;

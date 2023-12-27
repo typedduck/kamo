@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::BTreeMap, fmt, ops::Deref, ptr::NonNull, r
 
 use crate::{
     mem::TARGET,
-    value::{Pair, SmartString, Value, Vector},
+    value::{ByteVector, Pair, SmartString, Value, Vector},
 };
 
 use super::{Arena, Pointer, Root, Slot, Stats, Trace};
@@ -60,15 +60,15 @@ pub const MAX_ALLOCATION_PRESSURE: usize = 1024 * 1024;
 /// the number of buckets multiplied by the capacity of a bucket.
 ///
 /// The values which can be allocated by the mutator are:
-/// * [`Vec<u8>`](Vec<u8>) (bytevec)
+/// * [`BytevVector`](ByteVector) (bytevec)
 /// * [`Pair`](Pair) (cons cell)
 /// * [`SmartString`](SmartString) (string)
 /// * [`Box<str>`](Box<str>) (symbol)
 /// * [`Vector`](Vector) (vector)
 ///
 /// The mutator can also allocate values which are used by the evaluator:
-/// * `Activation`
-/// * `Procedure`
+/// * [`Activation`](Activation) (activation frame)
+/// * [`Procedure`](Procedure) (procedure)
 ///
 /// In order to allocate the values for the evaluator, the `evaluate` feature
 /// must be enabled.
@@ -79,7 +79,7 @@ pub const MAX_ALLOCATION_PRESSURE: usize = 1024 * 1024;
 /// collection. Almost all pointers can be converted to a value. The only
 /// exception is the pointer to an activation frame. This is because the
 /// activation frame should not be used outside of the evaluator.
-/// 
+///
 /// The mutator is not `Send` and not `Sync`. This means that the mutator can
 /// not be sent between threads and can not be shared between threads. This is
 /// because the mutator is not thread safe. This means that the mutator should
@@ -87,21 +87,21 @@ pub const MAX_ALLOCATION_PRESSURE: usize = 1024 * 1024;
 /// collection is not atomic. This means that the garbage collection can be
 /// triggered while a value is being allocated. This can lead to dangling
 /// pointers in a multithreaded environment.
-/// 
+///
 /// This may change in the future.
-/// 
+///
 /// ## Symbols
-/// 
+///
 /// Symbols are interned. If the symbol already exists in the symbol map, the
 /// existing symbol is returned. The symbol map only contains weak references to
 /// the symbols. Therefore the symbol map does not own the symbols but it is
 /// ensured that the symbols are not collected while they are interned and a
 /// reference to the symbol exists.
-/// 
+///
 /// If an existing symbol is returned, then the weak reference is upgraded to a
 /// strong reference. This is safe because the symbol is still alive.
 pub struct Mutator<'a> {
-    bytevecs: Arena<'a, Vec<u8>, BUCKET_SMALL_SIZE>,
+    bytevecs: Arena<'a, ByteVector, BUCKET_SMALL_SIZE>,
     pairs: Arena<'a, Pair<'a>, BUCKET_LARGE_SIZE>,
     strings: Arena<'a, SmartString, BUCKET_DEFAULT_SIZE>,
     symbols: Arena<'a, Box<str>, BUCKET_DEFAULT_SIZE>,
@@ -207,7 +207,7 @@ impl<'a> Mutator<'a> {
 
     /* #region Allocation */
 
-    fn alloc_bytevec(&mut self, value: Vec<u8>) -> Pointer<'a, Vec<u8>> {
+    fn alloc_bytevec(&mut self, value: ByteVector) -> Pointer<'a, ByteVector> {
         self.on_allocate();
 
         let value = self.bytevecs.alloc(value);
@@ -217,8 +217,8 @@ impl<'a> Mutator<'a> {
     }
 
     #[inline]
-    pub fn new_bytevec(&mut self, value: impl Into<Vec<u8>>) -> Pointer<'a, Vec<u8>> {
-        self.alloc_bytevec(value.into())
+    pub fn new_bytevec(&mut self, value: impl AsRef<[u8]>) -> Pointer<'a, ByteVector> {
+        self.alloc_bytevec(value.as_ref().into())
     }
 
     pub fn new_pair(&mut self, head: Value<'a>, tail: Value<'a>) -> Pointer<'a, Pair<'a>> {
@@ -315,7 +315,10 @@ impl<'a> Mutator<'a> {
     /// Coerces the raw pointer into a valid bytevec pointer. Returns `None` if
     /// the pointer is not valid.
     #[inline]
-    pub fn into_bytevec(&mut self, raw: NonNull<Slot<Vec<u8>>>) -> Option<Pointer<'a, Vec<u8>>> {
+    pub fn into_bytevec(
+        &mut self,
+        raw: NonNull<Slot<ByteVector>>,
+    ) -> Option<Pointer<'a, ByteVector>> {
         self.bytevecs
             .is_valid_pointer(raw)
             .then(|| Pointer::new(raw))
@@ -325,9 +328,7 @@ impl<'a> Mutator<'a> {
     /// pointer is not valid.
     #[inline]
     pub fn into_pair(&mut self, raw: NonNull<Slot<Pair<'a>>>) -> Option<Pointer<'a, Pair<'a>>> {
-        self.pairs
-            .is_valid_pointer(raw)
-            .then(|| Pointer::new(raw))
+        self.pairs.is_valid_pointer(raw).then(|| Pointer::new(raw))
     }
 
     /// Coerces the raw pointer into a valid string pointer. Returns `None` if

@@ -5,7 +5,7 @@ use crate::{
     value::SmartString,
 };
 
-use super::{Pair, Value, ValueKind, Vector};
+use super::{Pair, Value, ValueKind, Vector, ByteVector};
 
 /// A unique identifier for a [`Value`].
 /// 
@@ -44,7 +44,7 @@ impl ValueId {
                 Some(m.borrow_mut().into_symbol(ptr)?.into())
             }
             ValueTag::Bytevec => {
-                let ptr = NonNull::new(self.1 as *mut Slot<Vec<u8>>)?;
+                let ptr = NonNull::new(self.1 as *mut Slot<ByteVector>)?;
                 Some(m.borrow_mut().into_bytevec(ptr)?.into())
             }
             ValueTag::Vector => {
@@ -91,9 +91,9 @@ impl From<&Pointer<'_, Box<str>>> for ValueId {
     }
 }
 
-impl From<&Pointer<'_, Vec<u8>>> for ValueId {
+impl From<&Pointer<'_, ByteVector>> for ValueId {
     #[inline]
-    fn from(ptr: &Pointer<'_, Vec<u8>>) -> Self {
+    fn from(ptr: &Pointer<'_, ByteVector>) -> Self {
         Self(ValueTag::Bytevec, ptr.as_ptr() as usize)
     }
 }
