@@ -66,13 +66,6 @@ pub const MAX_ALLOCATION_PRESSURE: usize = 1024 * 1024;
 /// * [`Box<str>`](Box<str>) (symbol)
 /// * [`Vector`](Vector) (vector)
 ///
-/// The mutator can also allocate values which are used by the evaluator:
-/// * [`Activation`](Activation) (activation frame)
-/// * [`Procedure`](Procedure) (procedure)
-///
-/// In order to allocate the values for the evaluator, the `evaluate` feature
-/// must be enabled.
-///
 /// All allocations are returned as [`Pointer`](Pointer)s. A pointer is a
 /// reference to a value in the mutator. The pointer is reference counted and
 /// can be cloned. The pointer is also used to trace values during garbage
