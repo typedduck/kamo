@@ -162,7 +162,13 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
     }
 
     fn visit_float(&mut self, value: f64) -> Self::Result {
-        write!(self.0, "{}", value)
+        if value.is_nan() {
+            write!(self.0, "+nan.0")
+        } else if value.is_infinite() {
+            write!(self.0, "{}inf.0", if value.is_sign_negative() { "-" } else { "+" })
+        } else {
+            write!(self.0, "{}", value)
+        }
     }
 
     fn visit_pair(&mut self, value: &Pair<'_>) -> Self::Result {
