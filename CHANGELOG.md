@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.5.0](https://github.com/typedduck/kamo/tree/v0.5.0) - 2024-01-18
+
+* Added feature `macros` to enable the `sexpr!`, `sexpr_file!` and
+  `sexpr_script!` macros. The macros are not enabled by default.
+
+* Handle special cases for floating-point values in `SimplePrinterVisitor`.
+
 ## [0.4.0](https://github.com/typedduck/kamo/tree/v0.4.0) - 2023-12-27
 
 * Changed the implementation of byte vector from `Vec<u8>` to
