@@ -127,7 +127,7 @@ mod kind;
 pub use kind::ValueKind;
 
 mod pair;
-pub use pair::Pair;
+pub use pair::{Pair, Next};
 
 mod printer;
 pub use printer::{print, SimplePrinter, SimplePrinterVisitor};

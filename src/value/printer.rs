@@ -1,22 +1,22 @@
 use std::{collections::HashSet, fmt};
 use unicode_ident::{is_xid_continue, is_xid_start};
 
-use super::{Pair, Value, Visitor, Vector};
+use super::{Pair, Value, Vector, Visitor};
 
 /// This function prints a value on a single line. It formats the value in a
 /// Scheme-like syntax.
-/// 
+///
 /// The returned [`SimplePrinter`](SimplePrinter) implements the
 /// [`Display`](std::fmt::Display) trait and can be used to print the value.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use kamo::value::{print, Value};
-/// 
+///
 /// let value = Value::new_int(42);
 /// let printer = print(value);
-/// 
+///
 /// assert_eq!(printer.to_string(), "42");
 /// ```
 #[inline]
@@ -27,15 +27,15 @@ pub fn print(value: Value<'_>) -> SimplePrinter<'_> {
 /// A wrapper around a [`Value`](super::Value) that implements the
 /// [`Display`](std::fmt::Display) trait. It can be used to print a value in a
 /// Scheme-like syntax. The output is a single line.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use kamo::value::{SimplePrinter, Value};
-/// 
+///
 /// let value = Value::new_int(42);
 /// let printer = SimplePrinter(value);
-/// 
+///
 /// assert_eq!(printer.to_string(), "42");
 /// ```
 #[derive(Debug)]
@@ -50,29 +50,29 @@ impl<'a> fmt::Display for SimplePrinter<'a> {
 
 /// A visitor that prints a value in a Scheme-like syntax to the given
 /// [`Formatter`](std::fmt::Formatter).
-/// 
+///
 /// It is used by the [`SimplePrinter`](SimplePrinter) to print a value. The
 /// value is printed on a single line.
-/// 
+///
 /// # Note
-/// 
+///
 /// The implementation of the visit-methods considers that the value may be
 /// circular. In order to prevent infinite recursion, the implementation checks
 /// if the value, either a list or vector, has already been visited and if so,
 /// returns early. Circular lists are printed as `<cyclic list>` and circular
 /// vectors as `<cyclic vector>`.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
 /// use kamo::{
 ///     mem::Mutator,
 ///     value::{SimplePrinterVisitor, Value}
 /// };
-/// 
+///
 /// // A wrapper around a `Value` that implements `Display`.
 /// struct SimplePrinter<'a>(pub Value<'a>);
-/// 
+///
 /// impl<'a> std::fmt::Display for SimplePrinter<'a> {
 ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 ///         // Create a visitor that prints the value.
@@ -81,25 +81,25 @@ impl<'a> fmt::Display for SimplePrinter<'a> {
 ///         self.0.accept(&mut visitor)
 ///     }
 /// }
-/// 
+///
 /// // Display a simple value.
 /// let value = Value::new_int(42);
 /// let printer = SimplePrinter(value);
-/// 
+///
 /// assert_eq!(printer.to_string(), "42");
-/// 
+///
 /// // Create a `Mutator` to allocate values.
 /// let m = Mutator::new_ref();
-/// 
+///
 /// // Display a simple list.
 /// let value = Value::new_list(
 ///     m.clone(),
 ///     [Value::new_int(42), Value::new_int(43)],
 /// );
 /// let printer = SimplePrinter(value);
-/// 
+///
 /// assert_eq!(printer.to_string(), "(42 43)");
-/// 
+///
 /// // Display a cyclic list.
 /// let list = Value::new_list(
 ///     m.clone(),
@@ -111,7 +111,7 @@ impl<'a> fmt::Display for SimplePrinter<'a> {
 ///     .as_pair_mut().unwrap()
 ///     .set_cdr(list.clone());
 /// let printer = SimplePrinter(list);
-/// 
+///
 /// assert_eq!(
 ///     printer.to_string(),
 ///     format!("(42 43 44 <cyclic list>)")
@@ -221,7 +221,9 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
 
         write!(self.0, "#(")?;
         if let Some((first, rest)) = value.split_first() {
-            let ptr = first.as_vector().map_or(0, |v| v as *const Vector<'_> as usize);
+            let ptr = first
+                .as_vector()
+                .map_or(0, |v| v as *const Vector<'_> as usize);
 
             if ptr == seen {
                 write!(self.0, "<cyclic vector>")?;
@@ -229,7 +231,9 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
                 first.accept(self)?;
             }
             for value in rest {
-                let ptr = value.as_vector().map_or(0, |v| v as *const Vector<'_> as usize);
+                let ptr = value
+                    .as_vector()
+                    .map_or(0, |v| v as *const Vector<'_> as usize);
 
                 if ptr == seen {
                     write!(self.0, " <cyclic vector>")?;
@@ -416,11 +420,7 @@ mod tests {
 
         let mut vector = Value::new_vector(
             m.clone(),
-            &[
-                Value::new_int(42),
-                Value::new_int(43),
-                Value::new_int(44),
-            ],
+            &[Value::new_int(42), Value::new_int(43), Value::new_int(44)],
         );
         let cycle = vector.clone();
 
@@ -431,5 +431,4 @@ mod tests {
             format!("#(42 43 44 <cyclic vector>)")
         );
     }
-
 }

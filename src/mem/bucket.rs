@@ -132,6 +132,14 @@ impl<'a, T: fmt::Debug, const N: usize> Bucket<'a, T, N> {
         let ptr = unsafe { Pointer::new_unchecked(ptr) };
         Some(ptr)
     }
+
+    pub(super) fn drop_all(&mut self) {
+        for i in 0..N {
+            self.entries[i] = Slot::Dropped;
+        }
+        self.next = N;
+        self.len = N;
+    }
 }
 
 impl<'a, T: Trace<'a> + fmt::Debug, const N: usize> Bucket<'a, T, N> {

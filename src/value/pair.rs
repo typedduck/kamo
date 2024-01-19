@@ -1,19 +1,27 @@
 use std::collections::HashSet;
 
-use crate::mem::{Root, ToRoot, Trace};
+use crate::mem::{Pointer, Root, ToRoot, Trace};
 
 use super::Value;
 
+/// The next value in a list.
+#[derive(Clone, Debug, PartialEq)]
+pub enum Next<'a> {
+    Pair(Pointer<'a, Pair<'a>>),
+    Dot(Value<'a>),
+    Nil,
+}
+
 /// A cons cell holding two values of any type.
-/// 
+///
 /// A pair is a cons cell. It contains two values, the `car` and the `cdr`.
 /// The locks on the values are released when they are added to a pair. On
 /// garbage collection, the pair traces the values.
-/// 
+///
 /// A pair is a proper list if the `cdr` is a pair or a nil value. It is
 /// circular if the `cdr` points to itself or to a pair that is circular.
 /// A pair can not be created directly. Instead, use:
-/// 
+///
 /// - [`Mutator::new_pair()`](crate::mem::Mutator::new_pair), allocates a new
 ///   pair.
 /// - [`Value::new_pair()`](super::Value::new_pair) or
@@ -39,6 +47,17 @@ impl<'a> Pair<'a> {
         tail.unlock();
 
         Self { head, tail }
+    }
+
+    /// Returns the next value in the list.
+    pub fn next(&self) -> Next<'a> {
+        if let Some(pair) = self.tail.as_pair_ptr() {
+            Next::Pair(pair)
+        } else if self.tail.is_nil() {
+            Next::Nil
+        } else {
+            Next::Dot(self.tail.clone())
+        }
     }
 
     /// Returns a reference to the head of the pair.

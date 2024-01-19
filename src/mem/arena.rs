@@ -121,6 +121,12 @@ impl<'a, T: fmt::Debug, const N: usize> Arena<'a, T, N> {
             value.as_ptr(), self.buckets.len() - 1);
         value
     }
+
+    pub(super) fn drop_all(&mut self) {
+        for bucket in &mut self.buckets {
+            bucket.drop_all();
+        }
+    }
 }
 
 impl<'a, T: Trace<'a> + fmt::Debug, const N: usize> Arena<'a, T, N> {

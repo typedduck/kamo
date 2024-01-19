@@ -48,6 +48,11 @@ pub enum Slot<T: fmt::Debug> {
     /// `usize` is the number of locks on the slot. In the sweep phase of the
     /// garbage collector, all marked slots are unmarked.
     Marked(u32, T),
+    /// A slot which is dropped. This is used to prevent invalid memory access
+    /// and memory leaks. A dropped slot is not reachable from other slots and
+    /// is not collectable. An unlock does nothing on a dropped slot. This state
+    /// is only used when the [`Mutator`](crate::mem::Mutator) is dropped.
+    Dropped,
 }
 
 impl<T: fmt::Debug> Slot<T> {
@@ -100,7 +105,9 @@ impl<T: fmt::Debug> Slot<T> {
                     ptr, locks);
                 *locks = locks.checked_add(1).expect("lock overflow");
             }
-            _ => panic!("attempt to lock an unoccupied slot"),
+            Self::Dropped => panic!("attempt to lock dropped slot"),
+            Self::Undefined => panic!("attempt to lock undefined slot"),
+            Self::Vacant(_) => panic!("attempt to lock vacant slot"),
         }
     }
 
@@ -123,7 +130,9 @@ impl<T: fmt::Debug> Slot<T> {
                     ptr, locks);
                 *locks = locks.checked_sub(1).expect("null-unlock");
             }
-            _ => panic!("attempt to unlock an unoccupied slot"),
+            Self::Dropped => (),
+            Self::Undefined => panic!("attempt to unlock undefined slot"),
+            Self::Vacant(_) => panic!("attempt to unlock vacant slot"),
         }
     }
 

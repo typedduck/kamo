@@ -97,9 +97,9 @@ pub struct Mutator<'a> {
     bytevecs: Arena<'a, ByteVector, BUCKET_SMALL_SIZE>,
     pairs: Arena<'a, Pair<'a>, BUCKET_LARGE_SIZE>,
     strings: Arena<'a, SmartString, BUCKET_DEFAULT_SIZE>,
+    symbol_map: BTreeMap<&'a str, NonNull<Slot<Box<str>>>>,
     symbols: Arena<'a, Box<str>, BUCKET_DEFAULT_SIZE>,
     vectors: Arena<'a, Vector<'a>, BUCKET_SMALL_SIZE>,
-    symbol_map: BTreeMap<&'a str, NonNull<Slot<Box<str>>>>,
     allocations: usize,
     allocation_pressure: usize,
     garbage_collections: usize,
@@ -200,18 +200,13 @@ impl<'a> Mutator<'a> {
 
     /* #region Allocation */
 
-    fn alloc_bytevec(&mut self, value: ByteVector) -> Pointer<'a, ByteVector> {
+    pub fn new_bytevec(&mut self, value: impl AsRef<[u8]>) -> Pointer<'a, ByteVector> {
         self.on_allocate();
 
-        let value = self.bytevecs.alloc(value);
+        let value = self.bytevecs.alloc(value.as_ref().into());
 
         log::debug!(target: TARGET, "Mutator: new bytevec {:p}", value.as_ptr());
         value
-    }
-
-    #[inline]
-    pub fn new_bytevec(&mut self, value: impl AsRef<[u8]>) -> Pointer<'a, ByteVector> {
-        self.alloc_bytevec(value.as_ref().into())
     }
 
     pub fn new_pair(&mut self, head: Value<'a>, tail: Value<'a>) -> Pointer<'a, Pair<'a>> {
@@ -223,26 +218,18 @@ impl<'a> Mutator<'a> {
         value
     }
 
-    fn alloc_string(&mut self, value: SmartString) -> Pointer<'a, SmartString> {
+    pub fn new_string(&mut self, value: impl AsRef<str>) -> Pointer<'a, SmartString> {
         self.on_allocate();
 
-        let value = self.strings.alloc(value);
+        let value = self.strings.alloc(value.as_ref().into());
 
         log::debug!(target: TARGET, "Mutator: new string {:p}", value.as_ptr());
         value
     }
 
-    #[inline]
-    pub fn new_string(&mut self, value: SmartString) -> Pointer<'a, SmartString> {
-        self.alloc_string(value)
-    }
+    pub fn new_symbol(&mut self, value: impl AsRef<str>) -> Pointer<'a, Box<str>> {
+        let value = value.as_ref();
 
-    #[inline]
-    pub fn new_string_from(&mut self, value: impl AsRef<str>) -> Pointer<'a, SmartString> {
-        self.alloc_string(value.as_ref().into())
-    }
-
-    fn alloc_symbol(&mut self, value: &str) -> Pointer<'a, Box<str>> {
         // In the symbol map the symbols are interned. This means that if the
         // symbol already exists in the symbol map, the existing symbol is
         // returned. The symbol map only contains weak references to the
@@ -276,29 +263,15 @@ impl<'a> Mutator<'a> {
         }
     }
 
-    #[inline]
-    pub fn new_symbol(&mut self, value: impl AsRef<str>) -> Pointer<'a, Box<str>> {
-        self.alloc_symbol(value.as_ref())
-    }
-
-    fn alloc_vector(&mut self, value: Vector<'a>) -> Pointer<'a, Vector<'a>> {
+    pub fn new_vector(&mut self, values: impl Into<Vec<Value<'a>>>) -> Pointer<'a, Vector<'a>> {
         self.on_allocate();
 
-        let len = value.len();
-        let value = self.vectors.alloc(value);
+        let values = values.into();
+        let len = values.len();
+        let value = self.vectors.alloc(Vector::new(values));
 
         log::debug!(target: TARGET, "Mutator: new vector[{}] {:p}", len, value.as_ptr());
         value
-    }
-
-    #[inline]
-    pub fn new_vector(&mut self, value: Vector<'a>) -> Pointer<'a, Vector<'a>> {
-        self.alloc_vector(value)
-    }
-
-    #[inline]
-    pub fn new_vector_from(&mut self, value: impl Into<Vec<Value<'a>>>) -> Pointer<'a, Vector<'a>> {
-        self.alloc_vector(Vector::new(value.into()))
     }
 
     /* #endregion */
@@ -511,16 +484,31 @@ impl<'a> PartialEq for Mutator<'a> {
 
 impl<'a> fmt::Debug for Mutator<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Mutator")
+        let mut out = f.debug_struct("Mutator");
+        let out = out
             .field("bytevecs", &self.bytevecs)
             .field("pairs", &self.pairs)
             .field("strings", &self.strings)
             .field("symbols", &self.symbols)
-            .field("vectors", &self.vectors)
-            .field("symbol_map", &self.symbol_map)
+            .field("vectors", &self.vectors);
+
+        out.field("symbol_map", &self.symbol_map)
             .field("allocations", &self.allocations)
             .field("allocation_pressure", &self.allocation_pressure)
             .field("garbage_collections", &self.garbage_collections)
             .finish()
+    }
+}
+
+impl<'a> Drop for Mutator<'a> {
+    fn drop(&mut self) {
+        log::debug!(target: TARGET, "Mutator: dropping mutator");
+        self.symbol_map.clear();
+
+        self.bytevecs.drop_all();
+        self.pairs.drop_all();
+        self.strings.drop_all();
+        self.symbols.drop_all();
+        self.vectors.drop_all();
     }
 }

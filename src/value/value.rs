@@ -80,7 +80,7 @@ impl<'a> Value<'a> {
     /// Creates a new string.
     #[inline]
     pub fn new_string(m: MutatorRef<'a>, string: impl AsRef<str>) -> Self {
-        let string = m.borrow_mut().new_string_from(string);
+        let string = m.borrow_mut().new_string(string);
         string.into()
     }
 
@@ -94,7 +94,7 @@ impl<'a> Value<'a> {
     /// Creates a new vector.
     #[inline]
     pub fn new_vector(m: MutatorRef<'a>, vector: impl Into<Vec<Value<'a>>>) -> Self {
-        let vector = m.borrow_mut().new_vector_from(vector);
+        let vector = m.borrow_mut().new_vector(vector);
         vector.into()
     }
 
