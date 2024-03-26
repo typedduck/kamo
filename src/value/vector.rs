@@ -24,7 +24,6 @@ use super::Value;
 /// `IndexMut` because it is not possible to mutate a `Value` in place.
 /// 
 /// A `Vector` can not be created directly. Instead, use
-/// [`Mutator::new_vector_from()`](crate::mem::Mutator::new_vector_from) or
 /// [`Value::new_vector()`](super::Value::new_vector).
 pub struct Vector<'a> {
     elements: Vec<Value<'a>>,
