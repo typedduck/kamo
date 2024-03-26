@@ -89,9 +89,15 @@ pub trait ToRoot<'a> {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(u32)]
 pub enum Root<'a> {
-    /// A pointer to a slot that contains a [`Pair`](crate::value::Pair).
+    /// A pointer to a slot that contains a [`ByteVector`].
+    Bytevec(NonNull<Slot<ByteVector>>),
+    /// A pointer to a slot that contains a [`SmartString`].
+    String(NonNull<Slot<SmartString>>),
+    /// A pointer to a slot that contains a [`Box<str>`].
+    Symbol(NonNull<Slot<Box<str>>>),
+    /// A pointer to a slot that contains a [`Pair`].
     Pair(NonNull<Slot<Pair<'a>>>),
-    /// A pointer to a slot that contains a [`Vector`](crate::value::Vector).
+    /// A pointer to a slot that contains a [`Vector`].
     Vector(NonNull<Slot<Vector<'a>>>),
 }
 

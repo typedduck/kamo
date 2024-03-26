@@ -860,10 +860,28 @@ impl<'a> ToRoot<'a> for Value<'a> {
             | ValueKind::Bool(_)
             | ValueKind::Char(_)
             | ValueKind::Integer(_)
-            | ValueKind::Float(_)
-            | ValueKind::String(_, _)
-            | ValueKind::Symbol(_, _)
-            | ValueKind::Bytevec(_, _) => None,
+            | ValueKind::Float(_) => None,
+            ValueKind::String(locked, ptr) => {
+                if !*locked {
+                    Some(Root::String(*ptr))
+                } else {
+                    None
+                }
+            }
+            ValueKind::Symbol(locked, ptr) => {
+                if !*locked {
+                    Some(Root::Symbol(*ptr))
+                } else {
+                    None
+                }
+            }
+            ValueKind::Bytevec(locked, ptr) => {
+                if !*locked {
+                    Some(Root::Bytevec(*ptr))
+                } else {
+                    None
+                }
+            }
             ValueKind::Pair(locked, ptr) => {
                 if !*locked {
                     Some(Root::Pair(*ptr))

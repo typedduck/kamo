@@ -405,10 +405,13 @@ impl<'a> Mutator<'a> {
 
             for root in pending.drain(..) {
                 match root {
+                    Root::Bytevec(mut value) => unsafe { value.as_mut() }.mark(),
+                    Root::String(mut value) => unsafe { value.as_mut() }.mark(),
+                    Root::Symbol(mut value) => unsafe { value.as_mut() }.mark(),
                     Root::Pair(mut value) => {
                         let entry = unsafe { value.as_mut() };
 
-                        if entry.is_locked() {
+                        if !entry.is_marked() {
                             entry.mark();
                             entry.trace(&mut next);
                         }
@@ -416,7 +419,7 @@ impl<'a> Mutator<'a> {
                     Root::Vector(mut value) => {
                         let entry = unsafe { value.as_mut() };
 
-                        if entry.is_locked() {
+                        if !entry.is_marked() {
                             entry.mark();
                             entry.trace(&mut next);
                         }
@@ -436,6 +439,7 @@ impl<'a> Mutator<'a> {
             self.allocations);
         if self.allocations > self.allocation_pressure {
             self.collect_garbage();
+            self.allocations = 1;
         }
     }
 
