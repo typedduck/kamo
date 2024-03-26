@@ -1,6 +1,8 @@
 use std::{fmt, hash};
 
-use super::Input;
+#[cfg(feature = "evaluate")]
+use crate::eval;
+use crate::parser;
 
 /// A position in the input. It is used to track the position of the parser in
 /// the input.
@@ -29,7 +31,7 @@ impl Position {
     /// # Examples
     /// 
     /// ```rust
-    /// # use kamo::parser::Position;
+    /// # use kamo::Position;
     /// let pos = Position::new(0, 1, 1);
     /// 
     /// assert_eq!(pos.offset(), 0);
@@ -44,6 +46,24 @@ impl Position {
             offset: offset as u32,
             line: line as u16,
             column: column as u16,
+        }
+    }
+
+    /// Creates a new position by rebasing the current position to the given
+    /// `base` position.
+    pub fn rebase(&self, base: Position) -> Self {
+        let offset = base.offset + self.offset;
+        let line = base.line + self.line - 1;
+        let column = if self.line == 1 {
+            base.column + self.column - 1
+        } else {
+            self.column
+        };
+
+        Self {
+            offset,
+            line,
+            column,
         }
     }
 
@@ -114,30 +134,112 @@ impl fmt::Display for Position {
     }
 }
 
-impl From<Input<'_>> for Position {
+impl From<parser::Input<'_>> for Position {
     #[inline]
-    fn from(input: Input<'_>) -> Self {
+    fn from(input: parser::Input<'_>) -> Self {
         input.position()
     }
 }
 
-impl From<&Input<'_>> for Position {
+impl From<&parser::Input<'_>> for Position {
     #[inline]
-    fn from(input: &Input<'_>) -> Self {
+    fn from(input: &parser::Input<'_>) -> Self {
         input.position()
     }
 }
 
-impl From<&mut Input<'_>> for Position {
+impl From<&mut parser::Input<'_>> for Position {
     #[inline]
-    fn from(input: &mut Input<'_>) -> Self {
+    fn from(input: &mut parser::Input<'_>) -> Self {
         input.position()
     }
 }
 
-impl From<&&mut Input<'_>> for Position {
+impl From<&&mut parser::Input<'_>> for Position {
     #[inline]
-    fn from(input: &&mut Input<'_>) -> Self {
+    fn from(input: &&mut parser::Input<'_>) -> Self {
         input.position()
+    }
+}
+
+#[cfg(feature = "evaluate")]
+impl From<eval::Input<'_>> for Position {
+    #[inline]
+    fn from(input: eval::Input<'_>) -> Self {
+        input.position()
+    }
+}
+
+#[cfg(feature = "evaluate")]
+impl From<&eval::Input<'_>> for Position {
+    #[inline]
+    fn from(input: &eval::Input<'_>) -> Self {
+        input.position()
+    }
+}
+
+#[cfg(feature = "evaluate")]
+impl From<&mut eval::Input<'_>> for Position {
+    #[inline]
+    fn from(input: &mut eval::Input<'_>) -> Self {
+        input.position()
+    }
+}
+
+#[cfg(feature = "evaluate")]
+impl From<&&mut eval::Input<'_>> for Position {
+    #[inline]
+    fn from(input: &&mut eval::Input<'_>) -> Self {
+        input.position()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn position_new() {
+        let pos = Position::new(0, 1, 1);
+
+        assert_eq!(pos.offset(), 0);
+        assert_eq!(pos.line(), 1);
+        assert_eq!(pos.column(), 1);
+    }
+
+    #[test]
+    fn position_rebase() {
+        let base = Position::new(0, 1, 1);
+        let pos = Position::new(1, 1, 2);
+
+        let pos = pos.rebase(base);
+
+        assert_eq!(pos.offset(), 1);
+        assert_eq!(pos.line(), 1);
+        assert_eq!(pos.column(), 2);
+
+        let base = Position::new(46, 3, 7);
+
+        let pos = Position::new(3, 1, 4);
+        let pos = pos.rebase(base);
+
+        assert_eq!(pos.offset(), 49);
+        assert_eq!(pos.line(), 3);
+        assert_eq!(pos.column(), 10);
+
+        let pos = Position::new(7, 2, 4);
+        let pos = pos.rebase(base);
+
+        assert_eq!(pos.offset(), 53);
+        assert_eq!(pos.line(), 4);
+        assert_eq!(pos.column(), 4);
+    }
+
+    #[test]
+    fn position_display() {
+        let pos = Position::new(0, 1, 1);
+
+        assert_eq!(format!("{}", pos), "1:1");
+        assert_eq!(format!("{:#}", pos), "0:1:1");
     }
 }
