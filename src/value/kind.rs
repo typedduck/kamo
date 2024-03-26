@@ -168,7 +168,15 @@ impl<'a> PartialEq for ValueKind<'a> {
             (Self::Bool(a), Self::Bool(b)) => *a == *b,
             (Self::Char(a), Self::Char(b)) => *a == *b,
             (Self::Integer(a), Self::Integer(b)) => *a == *b,
-            (Self::Float(a), Self::Float(b)) => *a == *b,
+            (Self::Float(a), Self::Float(b)) => {
+                if a.is_nan() && b.is_nan() {
+                    true
+                } else {
+                    *a == *b
+                }
+            }
+            #[cfg(feature = "evaluate")]
+            (Self::Primitive(a), Self::Primitive(b)) => *a == *b,
             (Self::Pair(_, a), Self::Pair(_, b)) => {
                 if a != b {
                     let a = unsafe { a.as_ref() };
