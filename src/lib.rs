@@ -352,6 +352,9 @@ pub mod mem;
 pub mod parser;
 pub mod value;
 
+mod position;
+pub use position::Position;
+
 #[cfg(feature = "macros")]
 pub use kamo_macros::{sexpr, sexpr_file, sexpr_script};
 
