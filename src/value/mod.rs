@@ -121,6 +121,8 @@
 //! implement any printing logic.
 
 mod ident;
+use std::collections::BTreeMap;
+
 pub use ident::{ValueId, ValueTag};
 
 mod kind;
@@ -160,3 +162,8 @@ pub type SmartString = smartstring::SmartString<smartstring::LazyCompact>;
 /// 
 /// [`SmallVec<u8; 16>`]: <https://docs.rs/smallvec/1.11.2/smallvec/struct.SmallVec.html>
 pub type ByteVector = smallvec::SmallVec<[u8; 16]>;
+
+/// A type alias for [`BTreeMap<ValueId, Position>`].
+/// 
+/// Position maps are used to store the positions of car-values in the input.
+pub type PositionMap = BTreeMap<ValueId, Position>;
