@@ -6,6 +6,11 @@
 
 Kamo (カモ) is japanese for duck.
 
+* This is the second supplement to the second part of the Kamo project: memory
+management and runtime values. It adds a runtime parser for s-expressions in
+the module `kamo::form::sexpr`. See the change log for more information about
+the changes and fixes.
+
 * This is a supplement to the second part of the Kamo project: memory management
 and runtime values. It adds procedural macros to parse s-expressions into
 runtime values. The macros are defined in the crate

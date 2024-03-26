@@ -1,5 +1,20 @@
 # Change Log
 
+## [0.6.0](https://github.com/typedduck/kamo/tree/v0.6.0) - 2024-03-26
+
+* FIX: Checking equality of floating-point values when they are NaN.
+* FIX: Tracing of allocated objects in the garbage collector.
+* CHG: The methods `Value::new_list*` and `Value::new_dotlist*` return the empty
+  list (`nil`-value) if the input iterator is empty. The methods
+  `Value::new_dotlist*` panic if the input iterator is empty and the alternate
+  list end is not `nil`.
+* Added type `value::PositionMap` to store source code positions of nodes
+  emitted by a parser.
+* Added method `tag()` to `value::ValueId` to get the tag of a value.
+* Added semantic error and chaining methods to the combination parser library.
+* Moved the type `Position` to the crate root.
+* Runtime parser for s-expressions in module `form::sexpr`.
+
 ## [0.5.0](https://github.com/typedduck/kamo/tree/v0.5.0) - 2024-01-18
 
 * Added feature `macros` to enable the `sexpr!`, `sexpr_file!` and
