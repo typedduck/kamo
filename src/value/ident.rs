@@ -1,14 +1,14 @@
 use std::ptr::NonNull;
 
 use crate::{
-    mem::{Slot, MutatorRef, Pointer},
+    mem::{MutatorRef, Pointer, Slot},
     value::SmartString,
 };
 
-use super::{Pair, Value, ValueKind, Vector, ByteVector};
+use super::{ByteVector, Pair, Value, ValueKind, Vector};
 
 /// A unique identifier for a [`Value`].
-/// 
+///
 /// This is used to identify a [`Value`] without having to borrow the [`Value`]
 /// itself. This is useful for storing [`Value`]s as keys in a
 /// [`HashMap`](std::collections::HashMap). It is also useful for storing
@@ -17,7 +17,7 @@ use super::{Pair, Value, ValueKind, Vector, ByteVector};
 /// [`Value`]s are identical. This is achieved by storing the address of the
 /// [`Value`]s as the identifier along with a tag that identifies the type of
 /// [`Value`].
-/// 
+///
 /// Given the [`Mutator`](crate::mem::Mutator) where the original [`Value`] was
 /// allocated, a [`ValueId`] can be converted back into a [`Value`] using
 /// [`ValueId::into_value()`].
@@ -56,6 +56,12 @@ impl ValueId {
                 Some(m.borrow_mut().into_pair(ptr)?.into())
             }
         }
+    }
+
+    /// Returns the tag that identifies the type of [`Value`] that this
+    /// [`ValueId`] corresponds to.
+    pub fn tag(self) -> ValueTag {
+        self.0
     }
 }
 
