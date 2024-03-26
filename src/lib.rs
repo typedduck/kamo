@@ -347,6 +347,7 @@
 //! is implemented as a library on top of the `kamo` modules. It implements a
 //! subset of the R7RS standard.
 
+pub mod form;
 pub mod mem;
 pub mod parser;
 pub mod value;
