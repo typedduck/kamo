@@ -5,19 +5,19 @@ use crate::{
     value::SmartString,
 };
 
-use super::{Pair, ValueId, ValueKind, ValueTag, Vector, Visitor, ByteVector};
+use super::{ByteVector, Pair, ValueId, ValueKind, ValueTag, Vector, Visitor};
 
 /// A value in the Kamo runtime. This is a wrapper around [`ValueKind`].
-/// 
+///
 /// There are two main types of values: immediate values and heap values.
-/// 
+///
 /// * Immediate values are values that are stored directly in the value. They
 ///  are `nil`, booleans, characters, integers, and floats.
 /// * Heap values are values that are stored in the heap. They are pairs,
 /// strings, symbols, byte-vectors, vectors, and procedures.
-/// 
+///
 /// See [`ValueKind`] for more information.
-/// 
+///
 /// Value provides a safe interface to the values in the runtime. It is
 /// implemented as a wrapper around [`ValueKind`]. It provides methods to
 /// convert the value into a Rust type, to check the type of the value, and to
@@ -113,6 +113,8 @@ impl<'a> Value<'a> {
 
     /// Creates a new proper list from an iterator of values. It takes ownership
     /// of the values and stores them in the list.
+    /// 
+    /// An empty iterator returns the empty list `nil`.
     ///
     /// # Example
     ///
@@ -137,10 +139,12 @@ impl<'a> Value<'a> {
     }
 
     /// Creates a new proper list from an iterator of values of `T`.
-    /// 
+    ///
     /// The values in the iterator are of type `T`. The function `f` is used to
     /// convert the values into `Value<'a>`.
     ///
+    /// An empty iterator returns the empty list `nil`.
+    /// 
     /// # Example
     ///
     /// ```rust
@@ -169,15 +173,20 @@ impl<'a> Value<'a> {
     /// Creates a new list from an iterator of values. It takes ownership of the
     /// values and stores them in the list.
     ///
-    /// An alternative end of list may be set to a value other than `nil` by
-    /// passing it as the second optional argument. If this argument is `None`
-    /// or `Some(nil)`, the end of list is set to `nil`. A list with no elements
-    /// and a non-`nil` end of list is equivalent to a dotted pair
-    /// `(() . <eol>)`.
-    ///
     /// This function is equivalent to [`Value::new_list_map()`] with the
     /// identity function as the last argument.
     ///
+    /// An empty iterator returns the empty list `nil`.
+    /// 
+    /// An alternative end of list may be set to a value other than `nil` by
+    /// passing it as the second optional argument. If this argument is `None`
+    /// or `Some(nil)`, the end of list is set to `nil`.
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the iterator is empty and the alternative end of list is
+    /// neither `None` nor `Some(nil)`.
+    /// 
     /// # Example
     ///
     /// ```rust
@@ -194,14 +203,14 @@ impl<'a> Value<'a> {
     /// assert_eq!(list1, list2);
     /// assert_eq!(print(list1).to_string(), "(1 2 3)");
     /// assert_eq!(print(list2).to_string(), "(1 2 3)");
-    /// 
+    ///
     /// let dotlist1 = Value::new_dotlist(m.clone(), vec![
     ///    Value::new_int(1), Value::new_int(2), Value::new_int(3)
     /// ], Some(Value::new_int(4)));
     /// let dotlist2 = Value::new_dotlist_map(m.clone(), vec![
     ///    1, 2, 3
     /// ], Some(4), Value::new_int);
-    /// 
+    ///
     /// assert_eq!(dotlist1, dotlist2);
     /// assert_eq!(print(dotlist1).to_string(), "(1 2 3 . 4)");
     /// assert_eq!(print(dotlist2).to_string(), "(1 2 3 . 4)");
@@ -220,11 +229,16 @@ impl<'a> Value<'a> {
     /// The values in the iterator are of type `T`. The function `f` is used to
     /// convert the values into `Value<'a>`.
     ///
+    /// An empty iterator returns the empty list `nil`.
+    /// 
     /// An alternative end of list may be set to a value other than `nil` by
     /// passing it as the second optional argument. If this argument is `None`
-    /// or `Some(nil)`, the end of list is set to `nil`. A list with no elements
-    /// and a non-`nil` end of list is equivalent to a dotted pair
-    /// `(() . <eol>)`.
+    /// or `Some(nil)`, the end of list is set to `nil`.
+    /// 
+    /// # Panics
+    /// 
+    /// Panics if the iterator is empty and the alternative end of list is
+    /// neither `None` nor `Some(nil)`.
     ///
     /// # Example
     ///
@@ -242,14 +256,14 @@ impl<'a> Value<'a> {
     /// assert_eq!(list1, list2);
     /// assert_eq!(print(list1).to_string(), "(1 2 3)");
     /// assert_eq!(print(list2).to_string(), "(1 2 3)");
-    /// 
+    ///
     /// let dotlist1 = Value::new_dotlist(m.clone(), vec![
     ///    Value::new_int(1), Value::new_int(2), Value::new_int(3)
     /// ], Some(Value::new_int(4)));
     /// let dotlist2 = Value::new_dotlist_map(m.clone(), vec![
     ///    1, 2, 3
     /// ], Some(4), Value::new_int);
-    /// 
+    ///
     /// assert_eq!(dotlist1, dotlist2);
     /// assert_eq!(print(dotlist1).to_string(), "(1 2 3 . 4)");
     /// assert_eq!(print(dotlist2).to_string(), "(1 2 3 . 4)");
@@ -277,12 +291,11 @@ impl<'a> Value<'a> {
                 tail = cdr;
             }
             tail.set_cdr(eol);
-            head
+            head.into()
         } else {
-            let ptr = m.borrow_mut().new_pair(Value::new_nil(), eol);
-            ptr
+            assert!(eol.is_nil(), "alternative end of list must be nil");
+            Value::new_nil()
         }
-        .into()
     }
 
     /* #endregion */
@@ -629,7 +642,7 @@ impl<'a> Value<'a> {
 
     /// Returns the length of the value. Returns `None` if the value does not
     /// have a length.
-    /// 
+    ///
     /// Values that have a length are pairs, vectors, strings, symbols, and
     /// byte-vectors. `nil` has a length of `0`. Calculating the length of a
     /// list is linear to the length of the list. Circular lists are calculated
@@ -850,7 +863,7 @@ impl<'a> fmt::Debug for Value<'a> {
 impl<'a> ToRoot<'a> for Value<'a> {
     /// Returns the root of the value if it is a pair or a vector. Otherwise,
     /// returns `None`.
-    /// 
+    ///
     /// To optimize the performance of the garbage collector, the root of a
     /// value is only returned if it is not locked. If the value is locked, it
     /// will be traversed by the garbage collector anyway.
