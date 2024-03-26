@@ -40,6 +40,9 @@ smallvec = { version = "1.11.2", features = ["union"] }
 smartstring = "1.0.1"
 unicode-ident = "1.0.12"
 
+[dev-dependencies]
+kamo-macros = "0.1.0"
+
 [features]
 macros = ["dep:kamo-macros"]
 regex = ["dep:regex"]
