@@ -55,9 +55,7 @@ pub fn alpha0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 /// let (output, input) = alpha1(Input::from("abc京123"))
 ///     .expect("valid output");
 ///
@@ -74,9 +72,10 @@ pub fn alpha0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = alpha1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_ALPHA,
 ///     CharacterError::Alpha
 /// ));
 /// ```
@@ -91,7 +90,7 @@ pub fn alpha1(input: Input<'_>) -> ParseResult<&str> {
         }
         alpha0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::UnicodeAlpha))
+        Err(ParseError::eof(input).and(input, code::ERR_ALPHA, CharacterError::UnicodeAlpha))
     }
 }
 
@@ -125,9 +124,7 @@ pub fn alphanum0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 /// let (output, input) = alphanum1(Input::from("abc京123"))
 ///     .expect("valid output");
 ///
@@ -144,9 +141,10 @@ pub fn alphanum0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = alphanum1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_ALPHANUM,
 ///     CharacterError::UnicodeAlphaNum
 /// ));
 /// ```
@@ -161,7 +159,7 @@ pub fn alphanum1(input: Input<'_>) -> ParseResult<&str> {
         }
         alphanum0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::UnicodeAlphaNum))
+        Err(ParseError::eof(input).and(input, code::ERR_ALPHANUM, CharacterError::UnicodeAlphaNum))
     }
 }
 
@@ -195,9 +193,7 @@ pub fn numeric0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 /// let (output, input) = numeric1(Input::from("123abc京"))
 ///     .expect("valid output");
 ///
@@ -214,9 +210,10 @@ pub fn numeric0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = numeric1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_NUMERIC,
 ///     CharacterError::UnicodeNumeric
 /// ));
 /// ```
@@ -231,7 +228,7 @@ pub fn numeric1(input: Input<'_>) -> ParseResult<&str> {
         }
         numeric0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::UnicodeNumeric))
+        Err(ParseError::eof(input).and(input, code::ERR_NUMERIC, CharacterError::UnicodeNumeric))
     }
 }
 
@@ -265,9 +262,7 @@ pub fn lowercase0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 /// let (output, input) = lowercase1(Input::from("abc京123"))
 ///  .expect("valid output");
 ///
@@ -284,9 +279,10 @@ pub fn lowercase0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = lowercase1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_LOWERCASE,
 ///     CharacterError::UnicodeLowercase
 /// ));
 /// ```
@@ -301,8 +297,9 @@ pub fn lowercase1(input: Input<'_>) -> ParseResult<&str> {
         }
         lowercase0(input)
     } else {
-        Err(ParseError::eof_with(
+        Err(ParseError::eof(input).and(
             input,
+            code::ERR_LOWERCASE,
             CharacterError::UnicodeLowercase,
         ))
     }
@@ -338,9 +335,7 @@ pub fn uppercase0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 /// let (output, input) = uppercase1(Input::from("ABC京123"))
 ///     .expect("valid output");
 ///
@@ -357,9 +352,10 @@ pub fn uppercase0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = uppercase1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_UPPERCASE,
 ///     CharacterError::UnicodeUppercase
 /// ));
 /// ```
@@ -374,8 +370,9 @@ pub fn uppercase1(input: Input<'_>) -> ParseResult<&str> {
         }
         uppercase0(input)
     } else {
-        Err(ParseError::eof_with(
+        Err(ParseError::eof(input).and(
             input,
+            code::ERR_UPPERCASE,
             CharacterError::UnicodeUppercase,
         ))
     }
@@ -411,9 +408,7 @@ pub fn whitespace0(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 /// let (output, input) = whitespace1(Input::from(" \t\n\u{a0}abc京123"))
 ///     .expect("valid output");
 ///
@@ -430,9 +425,10 @@ pub fn whitespace0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = whitespace1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_WHITESPACE,
 ///     CharacterError::UnicodeWhitespace
 /// ));
 /// ```
@@ -447,8 +443,9 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
         }
         whitespace0(input)
     } else {
-        Err(ParseError::eof_with(
+        Err(ParseError::eof(input).and(
             input,
+            code::ERR_WHITESPACE,
             CharacterError::UnicodeWhitespace,
         ))
     }
@@ -470,9 +467,7 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 /// let (output, input) = ident_start(Input::from("京abc123"))
 ///     .expect("valid output");
 ///
@@ -495,9 +490,10 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = ident_start(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_IDENT_START,
 ///     CharacterError::UnicodeIdentStart
 /// ));
 /// ```
@@ -516,8 +512,9 @@ pub fn ident_start(input: Input<'_>) -> ParseResult<char> {
             ))
         }
     } else {
-        Err(ParseError::eof_with(
+        Err(ParseError::eof(input).and(
             input,
+            code::ERR_IDENT_START,
             CharacterError::UnicodeIdentStart,
         ))
     }
@@ -543,9 +540,7 @@ pub fn ident_start(input: Input<'_>) -> ParseResult<char> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 /// let (output, input) = ident_start_or(|ch| ch == '_')
 ///     (Input::from("_京abc123")).expect("valid output");
 ///
@@ -570,9 +565,10 @@ pub fn ident_start(input: Input<'_>) -> ParseResult<char> {
 /// let error = ident_start_or(|ch| ch == '_')(Input::from(""))
 ///     .expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_IDENT_START,
 ///     CharacterError::UnicodeIdentStart
 /// ));
 /// ```
@@ -595,8 +591,9 @@ where
                 ))
             }
         } else {
-            Err(ParseError::eof_with(
+            Err(ParseError::eof(input).and(
                 input,
+                code::ERR_IDENT_START,
                 CharacterError::UnicodeIdentStart,
             ))
         }
@@ -620,9 +617,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 ///
 /// let (output, input) = ident_cont(Input::from("_abc123-"))
 ///     .expect("valid output");
@@ -663,9 +658,7 @@ pub fn ident_cont(input: Input<'_>) -> ParseResult<&str> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, unicode::*}, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::{*, unicode::*}, CharacterError, code, Input}};
 ///
 /// let (output, input) = ident_cont_or(|ch| ch == '$')
 ///     (Input::from("_abc123$-")).expect("valid output");

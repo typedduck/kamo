@@ -1,16 +1,16 @@
-use crate::parser::{code, Input, Parser, ParseResult};
+use crate::parser::{code, Input, ParseResult, Parser};
 
 use super::CombinatorError;
 
 /// Executes a parser and returns the input that was parsed as a string slice of
 /// the original input.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CombinatorError, code, Input, Position};
+/// # use kamo::{Position, parser::{prelude::*, CombinatorError, code, Input}};
 /// let mut parser = recognize(delimited(char('('), tag("foo"), char(')')));
-/// 
+///
 /// assert_eq!(parser.parse("(foo)bar".into()),
 ///     Ok(("(foo)", Input::from("bar"))));
 /// assert_eq!(parser.parse("bar".into()), Err(ParseError::new(
@@ -39,7 +39,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{prelude::*, ParseError, Position};
+    use crate::{
+        parser::{prelude::*, ParseError},
+        Position,
+    };
 
     #[test]
     fn recognize_success() {

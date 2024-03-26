@@ -1,18 +1,18 @@
-use crate::parser::{code, Input, Parser, ParseResult, Span};
+use crate::parser::{code, Input, ParseResult, Parser, Span};
 
 use super::SequenceError;
 
 /// Creates a parser that parses `element` followed by `postfix`. The parser
 /// will return the result of `element`.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = terminated(tag("let"), char(')'));
-/// 
+///
 /// assert_eq!(parser(Input::new("let)")), Ok(("let", Input::new(""))));
 /// assert_eq!(parser(Input::new("abc)")), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
@@ -24,8 +24,24 @@ use super::SequenceError;
 ///     code::ERR_TERMINATED,
 ///     SequenceError::Terminated
 /// )));
-/// assert_eq!(parser(Input::new("let")), Err(ParseError::eof(
-///     Position::new(3, 1, 4))));
+/// 
+/// let error = parser(Input::new("let")).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(3, 1, 4),
+///     code::ERR_TERMINATED,
+///     SequenceError::Terminated
+/// ));
+/// 
+/// let error = parser(Input::new("")).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_TAG,
+///     CharacterError::Tag("let")
+/// ));
 /// ```
 pub fn terminated<'a, 'b, F1, F2, O1, O2>(
     mut element: F1,
@@ -56,7 +72,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{character::CharacterError, prelude::*, ParseError, Position};
+    use crate::{
+        parser::{character::CharacterError, prelude::*, ParseError},
+        Position,
+    };
 
     #[test]
     fn terminated_success() {
@@ -98,6 +117,14 @@ mod tests {
         let error =
             terminated(tag("let"), char(')'))(Input::new("let")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(3, 1, 4)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(3, 1, 4)).and(
+                Position::new(3, 1, 4),
+                code::ERR_TERMINATED,
+                SequenceError::Terminated
+            )
+        );
     }
 }

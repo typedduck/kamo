@@ -1,42 +1,69 @@
-use crate::parser::{code, Input, ParseResult, Parser};
+use crate::parser::{code, Input, ParseError, ParseResult, Parser};
 
-use super::SequenceError;
+use super::{fold_list_n, SequenceError};
 
-macro_rules! list_loop {
-    ($cursor:ident, $list:expr, $element:ident, $separator:ident) => {{
-        let mut cursor = $cursor;
-        let mut list = $list;
-
-        while let Ok((_, next)) = $separator.parse(cursor) {
-            infinite_loop_check!(cursor, next);
-            cursor = next;
-            match $element.parse(cursor) {
-                Ok((item, next)) => {
-                    list.push(item);
-                    cursor = next;
-                }
-                Err(mut err) => {
-                    err.push(next, code::ERR_LIST_NEXT, SequenceError::ListNext);
-                    return Err(err);
-                }
-            }
-        }
-        Ok((list, cursor))
-    }};
-}
-
-/// Parse a list of zero or more elements separated by the given separator.
+/// Parse a list of zero or up to `n` elements separated by the given separator
+/// and return a vector of the results.
 ///
-/// When the parser for the separator or the element excepts an empty input and
-/// no progress is made, the parser returns an infinte loop error. Sequence
-/// parsers must make progress on every successful iteration.
+/// Calls [`fold_list_n()`].
 ///
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
+/// let mut parser = list_n(2, char('a'), char(','));
+///
+/// assert_eq!(parser.parse(Input::new("abc")),
+///     Ok((vec!['a'], Input::from("bc"))));
+/// assert_eq!(parser.parse(Input::new("a,a")),
+///     Ok((vec!['a', 'a'], Input::from(""))));
+/// assert_eq!(parser.parse(Input::new("a,a,a")),
+///     Ok((vec!['a', 'a'], Input::from(",a"))));
+/// assert_eq!(parser.parse(Input::new("bac")),
+///     Ok((vec![], Input::from("bac"))));
+/// assert_eq!(parser.parse(Input::new("")), Ok((vec![], Input::from(""))));
+/// assert_eq!(parser.parse(Input::new("a,b")), Err(ParseError::new(
+///     Position::new(2, 1, 3),
+///     code::ERR_LIST_NEXT,
+///     SequenceError::ListNext
+/// )));
+/// assert_eq!(parser.parse(Input::new("a,")),Err(ParseError::new(
+///     Position::new(2, 1, 3),
+///     code::ERR_LIST_NEXT,
+///     SequenceError::ListNext
+/// )));
+/// ```
+#[inline]
+pub fn list_n<'a, 'b, F1, F2, O1, O2>(
+    n: usize,
+    item: F1,
+    separator: F2,
+) -> impl FnMut(Input<'a>) -> ParseResult<'a, Vec<O1>>
+where
+    O1: 'b,
+    O2: 'b,
+    F1: Parser<'a, 'b, O1>,
+    F2: Parser<'a, 'b, O2>,
+{
+    fold_list_n(n, item, separator, Vec::new, |mut acc, _, item| {
+        acc.push(item);
+        acc
+    })
+}
+
+/// Parse a list of zero or more elements separated by the given separator and
+/// returns a vector of the results.
+///
+/// Calls [`fold_list_n()`], `n` is set to `usize::MAX`.
+///
+/// # Examples
+///
+/// ```rust
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = list0(char('a'), char(','));
 ///
 /// assert_eq!(parser.parse(Input::new("abc")),
@@ -51,12 +78,16 @@ macro_rules! list_loop {
 ///     code::ERR_LIST_NEXT,
 ///     SequenceError::ListNext
 /// )));
-/// assert_eq!(parser.parse(Input::new("a,")),
-///     Err(ParseError::eof(Position::new(2, 1, 3))));
+/// assert_eq!(parser.parse(Input::new("a,")),Err(ParseError::new(
+///     Position::new(2, 1, 3),
+///     code::ERR_LIST_NEXT,
+///     SequenceError::ListNext
+/// )));
 /// ```
+#[inline]
 pub fn list0<'a, 'b, F1, F2, O1, O2>(
-    mut element: F1,
-    mut separator: F2,
+    item: F1,
+    separator: F2,
 ) -> impl FnMut(Input<'a>) -> ParseResult<'a, Vec<O1>>
 where
     O1: 'b,
@@ -64,28 +95,20 @@ where
     F1: Parser<'a, 'b, O1>,
     F2: Parser<'a, 'b, O2>,
 {
-    move |input| {
-        if let Ok((item, cursor)) = element.parse(input) {
-            infinite_loop_check!(input, cursor);
-            list_loop!(cursor, vec![item], element, separator)
-        } else {
-            Ok((vec![], input))
-        }
-    }
+    list_n(usize::MAX, item, separator)
 }
 
-/// Parse a list of one or more elements separated by the given separator.
+/// Parse a list of one or more elements separated by the given separator and
+/// returns a vector of the results.
 ///
-/// When the parser for the separator or the element excepts an empty input and
-/// no progress is made, the parser returns an infinte loop error. Sequence
-/// parsers must make progress on every successful iteration.
-///
+/// Calls [`fold_list_n()`], `n` is set to `usize::MAX`.
+/// 
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = list1(char('a'), char(','));
 ///
 /// assert_eq!(parser.parse(Input::new("abc")),
@@ -102,14 +125,28 @@ where
 ///     code::ERR_LIST_NEXT,
 ///     SequenceError::ListNext
 /// )));
-/// assert_eq!(parser.parse(Input::new("a,")),
-///     Err(ParseError::eof(Position::new(2, 1, 3))));
-/// assert_eq!(parser.parse(Input::new("")), Err(ParseError::eof(
-///     Position::new(0, 1, 1))));
+///
+/// let error = parser.parse("a,".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(2, 1, 3),
+///     code::ERR_LIST_NEXT,
+///     SequenceError::ListNext,
+/// ));
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_LIST_START,
+///     SequenceError::ListStart,
+/// ));
 /// ```
 pub fn list1<'a, 'b, F1, F2, O1, O2>(
-    mut element: F1,
-    mut separator: F2,
+    item: F1,
+    separator: F2,
 ) -> impl FnMut(Input<'a>) -> ParseResult<'a, Vec<O1>>
 where
     O1: 'b,
@@ -117,23 +154,26 @@ where
     F1: Parser<'a, 'b, O1>,
     F2: Parser<'a, 'b, O2>,
 {
-    move |input| {
-        let (item, cursor) = element.parse(input).map_err(|mut err| {
-            err.push(input, code::ERR_LIST_START, SequenceError::ListStart);
-            err
-        })?;
+    let mut items = list_n(usize::MAX, item, separator);
 
-        infinite_loop_check!(input, cursor);
-        list_loop!(cursor, vec![item], element, separator)
+    move |input| {
+        let (items, cursor) = items.parse(input)?;
+
+        if items.is_empty() {
+            return Err(ParseError::new_at(
+                cursor,
+                code::ERR_LIST_START,
+                SequenceError::ListStart,
+            ));
+        }
+        Ok((items, cursor))
     }
 }
 
 /// Parse a list of at least `m` elements and at most `n` elements separated by
-/// the given separator.
+/// the given separator and returns a vector of the results.
 ///
-/// When the parser for the separator or the element excepts an empty input and
-/// no progress is made, the parser returns an infinte loop error. Sequence
-/// parsers must make progress on every successful iteration.
+/// Calls [`fold_list_n()`].
 ///
 /// # Panics
 ///
@@ -142,9 +182,9 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = list_m_n(1, 2, tag("let"), char(','));
 ///
 /// assert_eq!(parser.parse(Input::new("let,let")),
@@ -153,7 +193,7 @@ where
 ///     Ok((vec!["let", "let"], Input::from(",let"))));
 /// assert_eq!(parser.parse("abc,let".into()), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_LIST_START,
+///     code::ERR_LIST_M,
 ///     SequenceError::ListM(1)
 /// )));
 /// assert_eq!(parser.parse("let,abc".into()), Err(ParseError::new(
@@ -161,16 +201,26 @@ where
 ///     code::ERR_LIST_NEXT,
 ///     SequenceError::ListM(1)
 /// )));
-/// assert_eq!(parser.parse("let,".into()), Err(ParseError::eof(
-///     Position::new(4, 1, 5))));
-/// assert_eq!(parser.parse("".into()), Err(ParseError::eof(
-///     Position::new(0, 1, 1))));
+/// assert_eq!(parser.parse("let,".into()), Err(ParseError::new(
+///     Position::new(4, 1, 5),
+///     code::ERR_LIST_NEXT,
+///     SequenceError::ListM(1)
+/// )));
+///
+/// let error = parser.parse("".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_LIST_M,
+///     SequenceError::ListM(1),
+/// ));
 /// ```
 pub fn list_m_n<'a, 'b, F1, F2, O1, O2>(
     m: usize,
     n: usize,
-    mut element: F1,
-    mut separator: F2,
+    item: F1,
+    separator: F2,
 ) -> impl FnMut(Input<'a>) -> ParseResult<'a, Vec<O1>>
 where
     O1: 'b,
@@ -180,53 +230,19 @@ where
 {
     assert!(m <= n, "m must be less than or equal to n");
 
+    let mut items = list_n(n, item, separator);
+
     move |input| {
-        if n - m == 0 && n == 0 {
-            return Ok((vec![], input));
-        }
+        let (items, cursor) = items.parse(input)?;
 
-        // If m is 0, then the list is optional
-        let (mut list, mut cursor) = if m == 0 {
-            if let Ok((item, cursor)) = element.parse(input) {
-                (vec![item], cursor)
-            } else {
-                return Ok((vec![], input));
-            }
-        } else {
-            let (item, cursor) = element.parse(input).map_err(|mut err| {
-                err.push(input, code::ERR_LIST_START, SequenceError::ListStart);
-                err
-            })?;
-            (vec![item], cursor)
-        };
-
-        infinite_loop_check!(input, cursor);
-        for i in 1..n {
-            match separator.parse(cursor) {
-                Ok((_, next)) => {
-                    infinite_loop_check!(cursor, next);
-                    cursor = next;
-                    match element.parse(cursor) {
-                        Ok((item, next)) => {
-                            list.push(item);
-                            cursor = next;
-                        }
-                        Err(mut err) => {
-                            err.push(cursor, code::ERR_LIST_NEXT, SequenceError::ListNext);
-                            return Err(err);
-                        }
-                    }
-                }
-                Err(mut err) => {
-                    if i < m {
-                        err.push(cursor, code::ERR_LIST_M, SequenceError::ListM(m));
-                        return Err(err);
-                    }
-                    return Ok((list, cursor));
-                }
-            }
+        if items.len() < m {
+            return Err(ParseError::new_at(
+                cursor,
+                code::ERR_LIST_M,
+                SequenceError::ListM(m),
+            ));
         }
-        Ok((list, cursor))
+        Ok((items, cursor))
     }
 }
 
@@ -234,7 +250,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{prelude::*, Position};
+    use crate::{parser::prelude::*, Position};
 
     #[test]
     fn list0_success() {
@@ -308,7 +324,15 @@ mod tests {
 
         let error = list0(char('a'), char(','))(Input::new("a,")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(2, 1, 3)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(2, 1, 3)).and(
+                Position::new(2, 1, 3),
+                code::ERR_LIST_NEXT,
+                SequenceError::ListNext
+            )
+        );
     }
 
     #[test]
@@ -326,36 +350,6 @@ mod tests {
         assert_eq!(input, Input::from(""));
         assert_eq!(input.current(), None);
         assert_eq!(input.position(), Position::new(3, 1, 4));
-
-        let error = list1(char('a'), char(','))(Input::new("bac")).expect_err("invalid output");
-
-        assert_eq!(
-            error,
-            ParseError::new(
-                Position::new(0, 1, 1),
-                code::ERR_LIST_START,
-                SequenceError::ListStart
-            )
-        );
-
-        let error = list1(char('a'), char(','))(Input::new("a,b")).expect_err("invalid output");
-
-        assert_eq!(
-            error,
-            ParseError::new(
-                Position::new(2, 1, 3),
-                code::ERR_LIST_NEXT,
-                SequenceError::ListNext
-            )
-        );
-
-        let error = list1(char('a'), char(','))(Input::new("a,")).expect_err("invalid output");
-
-        assert_eq!(error, ParseError::eof(Position::new(2, 1, 3)));
-
-        let error = list1(char('a'), char(','))(Input::new("")).expect_err("invalid output");
-
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
     }
 
     #[test]
@@ -422,11 +416,27 @@ mod tests {
 
         let error = list1(char('a'), char(','))(Input::new("a,")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(2, 1, 3)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(2, 1, 3)).and(
+                Position::new(2, 1, 3),
+                code::ERR_LIST_NEXT,
+                SequenceError::ListNext
+            )
+        );
 
         let error = list1(char('a'), char(','))(Input::new("")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_LIST_START,
+                SequenceError::ListStart
+            )
+        );
     }
 
     #[test]
@@ -453,31 +463,6 @@ mod tests {
         assert_eq!(output, vec![]);
         assert_eq!(input, Input::from("bac"));
         assert_eq!(input.current(), Some('b'));
-        assert_eq!(input.position(), Position::new(0, 1, 1));
-
-        let error =
-            list_m_n(0, 2, char('a'), char(','))(Input::new("a,b")).expect_err("invalid output");
-
-        assert_eq!(
-            error,
-            ParseError::new(
-                Position::new(2, 1, 3),
-                code::ERR_LIST_NEXT,
-                SequenceError::ListNext
-            )
-        );
-
-        let error =
-            list_m_n(0, 2, char('a'), char(','))(Input::new("a,")).expect_err("invalid output");
-
-        assert_eq!(error, ParseError::eof(Position::new(2, 1, 3)));
-
-        let (output, input) =
-            list_m_n(0, 1, char('a'), char(','))(Input::new("")).expect("valid output");
-
-        assert_eq!(output, vec![]);
-        assert_eq!(input, Input::from(""));
-        assert_eq!(input.current(), None);
         assert_eq!(input.position(), Position::new(0, 1, 1));
     }
 
@@ -529,8 +514,8 @@ mod tests {
             error,
             ParseError::new(
                 Position::new(0, 1, 1),
-                code::ERR_LIST_START,
-                SequenceError::ListStart
+                code::ERR_LIST_M,
+                SequenceError::ListM(1)
             )
         );
 
@@ -549,11 +534,27 @@ mod tests {
         let error =
             list_m_n(1, 2, char('a'), char(','))(Input::new("a,")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(2, 1, 3)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(2, 1, 3)).and(
+                Position::new(2, 1, 3),
+                code::ERR_LIST_NEXT,
+                SequenceError::ListNext
+            )
+        );
 
         let error =
             list_m_n(1, 2, char('a'), char(','))(Input::new("")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_LIST_M,
+                SequenceError::ListM(1)
+            )
+        );
     }
 }

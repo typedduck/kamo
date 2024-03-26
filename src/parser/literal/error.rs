@@ -46,9 +46,9 @@ impl fmt::Display for LiteralError {
             Self::AsciiEscapeCode => write!(f, "malformed ascii escape code: x[0-7][0-9A-Fa-f]"),
             Self::UnicodeEscapeCode => write!(f, "malformed unicode escape code: u{{[0-9A-Fa-f]{{1-6}}}}"),
             Self::UnicodeChar(code) => write!(f, "invalid unicode character: 0x{:x}", code),
-            Self::Escape => write!(f, "escape sequence: ['\"\\\\abednrt0] | x[0-7][0-9A-Fa-f] | u{{[0-9A-Fa-f]{{1-6}}}}"),
-            Self::EscapePart => write!(f, "escape sequence part: ['\"\\\\abednrt0] | x[0-7][0-9A-Fa-f] | u{{[0-9A-Fa-f]{{1-6}}}}"),
-            Self::QuotedChar => write!(f, "quoted character: \"'\" ( <is_char_quotable> | EscapedChar ) \"'\""),
+            Self::Escape => write!(f, "expecting escape sequence: ['\"\\\\abednrt0] | x[0-7][0-9A-Fa-f] | u{{[0-9A-Fa-f]{{1-6}}}}"),
+            Self::EscapePart => write!(f, "expecting escape sequence part: ['\"\\\\abednrt0] | x[0-7][0-9A-Fa-f] | u{{[0-9A-Fa-f]{{1-6}}}}"),
+            Self::QuotedChar => write!(f, "expecting quoted character: \"'\" ( <is_char_quotable> | EscapedChar ) \"'\""),
         }
     }
 }

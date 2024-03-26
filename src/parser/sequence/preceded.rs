@@ -8,9 +8,9 @@ use super::SequenceError;
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = preceded(char('('), tag("let"));
 ///
 /// assert_eq!(parser(Input::new("(let")), Ok(("let", Input::new(""))));
@@ -24,8 +24,24 @@ use super::SequenceError;
 ///     code::ERR_TAG,
 ///     CharacterError::Tag("let")
 /// )));
-/// assert_eq!(parser(Input::new("(")), Err(ParseError::eof(
-///     Position::new(1, 1, 2))));
+/// 
+/// let error = parser(Input::new("(")).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(1, 1, 2),
+///     code::ERR_TAG,
+///     CharacterError::Tag("let")
+/// ));
+/// 
+/// let error = parser(Input::new("")).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_PRECEDED,
+///     CharacterError::Char('(')
+/// ));
 /// ```
 pub fn preceded<'a, 'b, F1, F2, O1, O2>(
     mut prefix: F1,
@@ -54,7 +70,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{character::CharacterError, prelude::*, ParseError, Position};
+    use crate::{
+        parser::{character::CharacterError, prelude::*, ParseError},
+        Position,
+    };
 
     #[test]
     fn preceded_success() {
@@ -95,6 +114,14 @@ mod tests {
 
         let error = preceded(char('('), tag("let"))(Input::new("(")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(1, 1, 2)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(1, 1, 2)).and(
+                Position::new(1, 1, 2),
+                code::ERR_TAG,
+                CharacterError::Tag("let")
+            )
+        );
     }
 }

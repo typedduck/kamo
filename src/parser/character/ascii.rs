@@ -7,8 +7,9 @@
 //! ## Example
 //!
 //! ```rust
-//! # use kamo::parser::{
-//! #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+//! # use kamo::{
+//! #     Position,
+//! #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 //! # };
 //! let (output, input) = digit1(Input::from("0123456789"))
 //!     .expect("valid output");
@@ -26,14 +27,15 @@
 //!
 //! let error = digit1(Input::from("")).expect_err("error output");
 //!
+//! assert!(error.is_eof());
 //! assert_eq!(error, ParseError::new(
 //!     Position::new(0, 1, 1),
-//!     code::ERR_EOF,
+//!     code::ERR_DIGIT,
 //!     CharacterError::Digit
 //! ));
 //! ```
 
-use crate::parser::{code, Input, ParseError, ParseResult, predicate};
+use crate::parser::{code, predicate, Input, ParseError, ParseResult};
 
 use super::{char, CharacterError};
 
@@ -65,8 +67,9 @@ pub fn alpha0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = alpha1(Input::from("abc123")).expect("valid output");
 ///
@@ -83,9 +86,10 @@ pub fn alpha0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = alpha1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_ALPHA,
 ///     CharacterError::Alpha
 /// ));
 /// ```
@@ -100,7 +104,7 @@ pub fn alpha1(input: Input<'_>) -> ParseResult<&str> {
         }
         alpha0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::Alpha))
+        Err(ParseError::eof(input).and(input, code::ERR_ALPHA, CharacterError::Alpha))
     }
 }
 
@@ -134,8 +138,9 @@ pub fn alphanum0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = alphanum1(Input::from("abc123"))
 ///     .expect("valid output");
@@ -153,9 +158,10 @@ pub fn alphanum0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = alphanum1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_ALPHANUM,
 ///     CharacterError::AlphaNum
 /// ));
 /// ```
@@ -170,7 +176,7 @@ pub fn alphanum1(input: Input<'_>) -> ParseResult<&str> {
         }
         alphanum0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::AlphaNum))
+        Err(ParseError::eof(input).and(input, code::ERR_ALPHANUM, CharacterError::AlphaNum))
     }
 }
 
@@ -204,8 +210,9 @@ pub fn digit0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = digit1(Input::from("0123456789"))
 ///     .expect("valid output");
@@ -223,9 +230,10 @@ pub fn digit0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = digit1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_DIGIT,
 ///     CharacterError::Digit
 /// ));
 /// ```
@@ -240,7 +248,7 @@ pub fn digit1(input: Input<'_>) -> ParseResult<&str> {
         }
         digit0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::Digit))
+        Err(ParseError::eof(input).and(input, code::ERR_DIGIT, CharacterError::Digit))
     }
 }
 
@@ -274,8 +282,9 @@ pub fn bin_digit0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = bin_digit1(Input::from("0101"))
 ///     .expect("valid output");
@@ -293,9 +302,10 @@ pub fn bin_digit0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = bin_digit1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_BIN_DIGIT,
 ///     CharacterError::BinDigit
 /// ));
 /// ```
@@ -310,7 +320,7 @@ pub fn bin_digit1(input: Input<'_>) -> ParseResult<&str> {
         }
         bin_digit0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::BinDigit))
+        Err(ParseError::eof(input).and(input, code::ERR_BIN_DIGIT, CharacterError::BinDigit))
     }
 }
 
@@ -344,8 +354,9 @@ pub fn oct_digit0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = oct_digit1(Input::from("01234567"))
 ///     .expect("valid output");
@@ -363,9 +374,10 @@ pub fn oct_digit0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = oct_digit1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_OCT_DIGIT,
 ///     CharacterError::OctDigit
 /// ));
 /// ```
@@ -380,7 +392,7 @@ pub fn oct_digit1(input: Input<'_>) -> ParseResult<&str> {
         }
         oct_digit0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::OctDigit))
+        Err(ParseError::eof(input).and(input, code::ERR_OCT_DIGIT, CharacterError::OctDigit))
     }
 }
 
@@ -414,8 +426,9 @@ pub fn hex_digit0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = hex_digit1(Input::from("0123456789abcdef"))
 ///     .expect("valid output");
@@ -434,9 +447,10 @@ pub fn hex_digit0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = hex_digit1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_HEX_DIGIT,
 ///     CharacterError::HexDigit
 /// ));
 /// ```
@@ -451,7 +465,7 @@ pub fn hex_digit1(input: Input<'_>) -> ParseResult<&str> {
         }
         hex_digit0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::HexDigit))
+        Err(ParseError::eof(input).and(input, code::ERR_HEX_DIGIT, CharacterError::HexDigit))
     }
 }
 
@@ -485,8 +499,9 @@ pub fn whitespace0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = whitespace1(Input::from(" \t\n\r"))
 ///     .expect("valid output");
@@ -504,9 +519,10 @@ pub fn whitespace0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = whitespace1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_WHITESPACE,
 ///     CharacterError::Whitespace
 /// ));
 /// ```
@@ -521,7 +537,7 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
         }
         whitespace0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::Whitespace))
+        Err(ParseError::eof(input).and(input, code::ERR_WHITESPACE, CharacterError::Whitespace))
     }
 }
 
@@ -553,8 +569,9 @@ pub fn space0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = space1(Input::from(" \t")).expect("valid output");
 ///
@@ -571,9 +588,10 @@ pub fn space0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = space1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_SPACE,
 ///     CharacterError::Space
 /// ));
 /// ```
@@ -588,7 +606,7 @@ pub fn space1(input: Input<'_>) -> ParseResult<&str> {
         }
         space0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::Space))
+        Err(ParseError::eof(input).and(input, code::ERR_SPACE, CharacterError::Space))
     }
 }
 
@@ -624,8 +642,9 @@ pub fn graphic0(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = graphic1(Input::from("abc")).expect("valid output");
 ///
@@ -642,9 +661,10 @@ pub fn graphic0(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = graphic1(Input::from("")).expect_err("error output");
 ///
+/// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_GRAPHIC,
 ///     CharacterError::Graphic
 /// ));
 /// ```
@@ -659,7 +679,7 @@ pub fn graphic1(input: Input<'_>) -> ParseResult<&str> {
         }
         graphic0(input)
     } else {
-        Err(ParseError::eof_with(input, CharacterError::Graphic))
+        Err(ParseError::eof(input).and(input, code::ERR_GRAPHIC, CharacterError::Graphic))
     }
 }
 
@@ -668,8 +688,9 @@ pub fn graphic1(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = line_ending(Input::from("\r\n"))
 ///     .expect("valid output");
@@ -701,7 +722,12 @@ pub fn graphic1(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = line_ending(Input::from("")).expect_err("error output");
 ///
-/// assert_eq!(error, ParseError::eof(Input::from("")));
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///    Position::new(0, 1, 1),
+///    code::ERR_LINE_ENDING,
+///    CharacterError::LineEnding
+/// ));
 /// ```
 pub fn line_ending(input: Input<'_>) -> ParseResult<&str> {
     let mut cursor = input;
@@ -728,7 +754,11 @@ pub fn line_ending(input: Input<'_>) -> ParseResult<&str> {
             code::ERR_LINE_ENDING,
             CharacterError::LineEnding,
         )),
-        None => Err(ParseError::eof_with(input, CharacterError::LineEnding)),
+        None => Err(ParseError::eof(input).and(
+            input,
+            code::ERR_LINE_ENDING,
+            CharacterError::LineEnding,
+        )),
     }
 }
 
@@ -737,8 +767,9 @@ pub fn line_ending(input: Input<'_>) -> ParseResult<&str> {
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::{*, ascii::*}, CharacterError, code, Input, Position
+/// # use kamo::{
+/// #     Position,
+/// #     parser::{prelude::{*, ascii::*}, CharacterError, code, Input}
 /// # };
 /// let (output, input) = crlf(Input::from("\r\n")).expect("valid output");
 ///
@@ -755,9 +786,11 @@ pub fn line_ending(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// let error = crlf(Input::from("\r")).expect_err("error output");
 ///
-/// assert_eq!(error, ParseError::eof_with(
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     CharacterError::Crlf
+///     code::ERR_LINE_ENDING,
+///     CharacterError::Crlf,
 /// ));
 /// ```
 pub fn crlf(input: Input<'_>) -> ParseResult<&str> {
@@ -768,7 +801,9 @@ pub fn crlf(input: Input<'_>) -> ParseResult<&str> {
             cursor.advance();
             Ok(("\r\n", cursor))
         }
-        (Some('\r'), None) | (None, _) => Err(ParseError::eof_with(input, CharacterError::Crlf)),
+        (Some('\r'), None) | (None, _) => {
+            Err(ParseError::eof(input).and(input, code::ERR_LINE_ENDING, CharacterError::Crlf))
+        }
         (Some(_), _) => Err(ParseError::new(
             input,
             code::ERR_LINE_ENDING,
@@ -795,7 +830,7 @@ pub fn tab(input: Input<'_>) -> ParseResult<char> {
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::Position;
+    use crate::Position;
 
     use super::*;
 
@@ -829,9 +864,14 @@ mod tests {
 
         let error = alpha1(Input::from("")).expect_err("error output");
 
+        assert!(error.is_eof());
         assert_eq!(
             error,
-            ParseError::new(Position::new(0, 1, 1), code::ERR_EOF, CharacterError::Alpha)
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_ALPHA,
+                CharacterError::Alpha
+            )
         );
     }
 
@@ -865,11 +905,12 @@ mod tests {
 
         let error = alphanum1(Input::from("")).expect_err("error output");
 
+        assert!(error.is_eof());
         assert_eq!(
             error,
-            ParseError::new(
+            ParseError::eof(Position::new(0, 1, 1)).and(
                 Position::new(0, 1, 1),
-                code::ERR_EOF,
+                code::ERR_ALPHANUM,
                 CharacterError::AlphaNum
             )
         );
@@ -929,7 +970,15 @@ mod tests {
 
         let error = bin_digit1(Input::from("")).expect_err("error output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_BIN_DIGIT,
+                CharacterError::BinDigit
+            )
+        );
     }
 
     #[test]
@@ -986,7 +1035,15 @@ mod tests {
 
         let error = oct_digit1(Input::from("")).expect_err("error output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_OCT_DIGIT,
+                CharacterError::OctDigit
+            )
+        );
     }
 
     #[test]
@@ -1025,7 +1082,15 @@ mod tests {
 
         let error = digit1(Input::from("")).expect_err("error output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_DIGIT,
+                CharacterError::Digit
+            )
+        );
     }
 
     #[test]
@@ -1064,7 +1129,15 @@ mod tests {
 
         let error = hex_digit1(Input::from("")).expect_err("error output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_HEX_DIGIT,
+                CharacterError::HexDigit
+            )
+        );
     }
 
     #[test]
@@ -1103,7 +1176,15 @@ mod tests {
 
         let error = whitespace1(Input::from("")).expect_err("error output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_WHITESPACE,
+                CharacterError::Whitespace
+            )
+        );
     }
 
     #[test]
@@ -1142,7 +1223,15 @@ mod tests {
 
         let error = space1(Input::from("")).expect_err("error output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_SPACE,
+                CharacterError::Space
+            )
+        );
     }
 
     #[test]
@@ -1181,7 +1270,15 @@ mod tests {
 
         let error = graphic1(Input::from("")).expect_err("error output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_GRAPHIC,
+                CharacterError::Graphic
+            )
+        );
     }
 
     #[test]
@@ -1224,7 +1321,15 @@ mod tests {
 
         let error = line_ending(Input::from("")).expect_err("error output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_LINE_ENDING,
+                CharacterError::LineEnding
+            )
+        );
     }
 
     #[test]
@@ -1262,7 +1367,11 @@ mod tests {
 
         assert_eq!(
             error,
-            ParseError::eof_with(Position::new(0, 1, 1), CharacterError::Crlf)
+            ParseError::new(
+                Position::new(0, 1, 1),
+                code::ERR_LINE_ENDING,
+                CharacterError::Crlf
+            )
         );
     }
 }

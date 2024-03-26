@@ -9,9 +9,7 @@ use super::CharacterError;
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code, Input}};
 /// # use regex::Regex;
 /// let regex = Regex::new(r"^[a-z]+").unwrap();
 /// let (output, input) = match_re(&regex)(Input::new("hello world")).expect("valid output");
@@ -55,7 +53,7 @@ pub fn match_re(regex: &Regex) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, 
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::Position;
+    use crate::Position;
 
     use super::*;
 

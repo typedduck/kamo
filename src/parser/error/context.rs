@@ -13,7 +13,7 @@ use super::{
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, code, Input, Position};
+/// # use kamo::{Position, parser::{prelude::*, code, Input}};
 /// let mut parser = context(tag("hello"), "Expected `hello`");
 ///
 /// assert_eq!(parser.parse("hello world".into()),
@@ -49,7 +49,7 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, code, Input, Position};
+/// # use kamo::{Position, parser::{prelude::*, code, Input}};
 /// let mut parser = context_as(tag("hello"), code::ERR_TAG, "Expected `hello`");
 ///
 /// assert_eq!(parser.parse("hello world".into()),
@@ -89,11 +89,11 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, code, Input, Position};
+/// # use kamo::{Position, parser::{prelude::*, code, Input}};
 /// let mut parser = context_and(tag("hello"), |err| {
 ///     (code::ERR_TAG, "Expected `hello`".into())
 /// });
-/// 
+///
 /// assert_eq!(parser.parse("hello world".into()),
 ///     Ok(("hello", Input::from(" world"))));
 /// assert_eq!(parser.parse("world".into()), Err(ParseError::new(
@@ -118,4 +118,28 @@ where
             err
         })
     }
+}
+
+/// Marks the error of the parser as semantic
+/// 
+/// # Examples
+/// 
+/// ```rust
+/// # use kamo::{Position, parser::{prelude::*, code, Input}};
+/// let mut parser = semantic(tag("hello"));
+/// let result = parser.parse(Input::from("world"));
+/// 
+/// assert_eq!(result, Err(ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_TAG,
+///     "Expected `hello`"
+/// )));
+/// assert!(result.unwrap_err().is_semantic());
+/// ```
+pub fn semantic<'a, 'b, O, F>(mut f: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, O>
+where
+    O: 'b,
+    F: Parser<'a, 'b, O> + 'b,
+{
+    move |input| f.parse(input).map_err(|err| err.and_semantic())
 }

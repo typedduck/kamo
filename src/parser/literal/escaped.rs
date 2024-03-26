@@ -8,7 +8,7 @@ use super::LiteralError;
 ///
 /// ```text
 /// EscapedChar       = '\\' EscapedPart
-/// EscapedPart       = AsciiEscapedCode 
+/// EscapedPart       = AsciiEscapedCode
 ///                   | UnicodeEscapedCode
 ///                   | SingleEscapedPart
 /// AsciiEscapeCode   = 'x' [0-7] [0-9A-Fa-f]
@@ -27,17 +27,12 @@ pub fn escaped_char(input: Input<'_>) -> ParseResult<'_, char> {
 /// # Grammar:
 ///
 /// ```text
-/// EscapedPart = AsciiEscapeCode 
+/// EscapedPart = AsciiEscapeCode
 ///             | UnicodeEscapeCode
 ///             | SingleEscapeCode
 /// ```
 pub fn escaped_part(input: Input<'_>) -> ParseResult<'_, char> {
-    any((
-        ascii_escape_code,
-        unicode_escape_code,
-        single_escape_code,
-    ))(input)
-    .map_err(|mut err| {
+    any((ascii_escape_code, unicode_escape_code, single_escape_code))(input).map_err(|mut err| {
         err.push(input, code::ERR_ESCAPE_PART, LiteralError::Escape);
         err
     })
@@ -133,6 +128,7 @@ pub fn unicode_escape_code(input: Input<'_>) -> ParseResult<'_, char> {
             Span::new(input.position(), cursor.position()),
             code::ERR_UNICODE_CHAR,
             LiteralError::UnicodeChar(code),
-        )),
+        )
+        .and_semantic()),
     }
 }

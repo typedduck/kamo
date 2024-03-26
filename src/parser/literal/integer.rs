@@ -54,8 +54,9 @@ pub fn recognize_integer(
 pub fn integer(radix: Radix, signed: bool) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, i64> {
     move |input| {
         let (output, input) = recognize_integer(radix, signed)(input)?;
-        let value = i64::from_str_radix(output, radix.base())
-            .map_err(|_| ParseError::new(input, code::ERR_INTEGER, LiteralError::Integer))?;
+        let value = i64::from_str_radix(output, radix.base()).map_err(|_| {
+            ParseError::new(input, code::ERR_INTEGER, LiteralError::Integer).and_semantic()
+        })?;
 
         Ok((value, input))
     }

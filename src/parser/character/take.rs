@@ -8,15 +8,20 @@ use super::CharacterError;
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = take(3);
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(("abc", "".into())));
 /// assert_eq!(parser.parse("abcd".into()), Ok(("abc", "d".into())));
-/// assert_eq!(parser.parse("ab".into()), Err(ParseError::eof_with(
+/// 
+/// let error = parser.parse("ab".into()).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
 ///     Position::new(2, 1, 3),
+///     code::ERR_TAKE,
 ///     CharacterError::Take(3)
-/// )));
+/// ));
 /// ```
 pub fn take(n: usize) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str> + Copy {
     move |input| {
@@ -27,7 +32,9 @@ pub fn take(n: usize) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str> + Co
                 cursor.advance();
                 Ok(())
             }
-            None => Err(ParseError::eof_with(cursor, CharacterError::Take(n))),
+            None => {
+                Err(ParseError::eof(input).and(cursor, code::ERR_TAKE, CharacterError::Take(n)))
+            }
         })?;
         let output = &input.as_str()[..(cursor.position().offset() - input.position().offset())];
 
@@ -44,7 +51,7 @@ pub fn take(n: usize) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str> + Co
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = take_while0(|c| c.is_ascii_digit());
 ///
 /// assert_eq!(parser.parse("123abc".into()), Ok(("123", "abc".into())));
@@ -72,7 +79,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = take_while1(|c| c.is_ascii_digit());
 ///
 /// assert_eq!(parser.parse("123abc".into()), Ok(("123", "abc".into())));
@@ -81,10 +88,15 @@ where
 ///     code::ERR_TAKE_WHILE_1,
 ///     CharacterError::TakeWhile1
 /// )));
-/// assert_eq!(parser.parse("".into()), Err(ParseError::eof_with(
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
+///     code::ERR_TAKE_WHILE_1,
 ///     CharacterError::TakeWhile1
-/// )));
+/// ));
 /// ```
 pub fn take_while1<P>(cond: P) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str>
 where
@@ -106,7 +118,11 @@ where
                 code::ERR_TAKE_WHILE_1,
                 CharacterError::TakeWhile1,
             )),
-            None => Err(ParseError::eof_with(cursor, CharacterError::TakeWhile1)),
+            None => Err(ParseError::eof(input).and(
+                cursor,
+                code::ERR_TAKE_WHILE_1,
+                CharacterError::TakeWhile1,
+            )),
         }
     }
 }
@@ -125,7 +141,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position, Span};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, Span, code}};
 /// let mut parser = take_while_m_n(2, 4, |c| c.is_ascii_digit());
 ///
 /// assert_eq!(parser.parse("123abc".into()), Ok(("123", "abc".into())));
@@ -139,10 +155,15 @@ where
 ///     code::ERR_TAKE_WHILE_M,
 ///     CharacterError::TakeWhileM(2)
 /// )));
-/// assert_eq!(parser.parse("".into()), Err(ParseError::eof_with(
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
+///     code::ERR_TAKE_WHILE_M,
 ///     CharacterError::TakeWhileM(2)
-/// )));
+/// ));
 /// ```
 pub fn take_while_m_n<P>(
     m: usize,
@@ -164,8 +185,9 @@ where
                 code::ERR_TAKE_WHILE_M,
                 CharacterError::TakeWhileM(m),
             )),
-            None => Err(ParseError::eof_with(
+            None => Err(ParseError::eof(input).and(
                 cursor.position(),
+                code::ERR_TAKE_WHILE_M,
                 CharacterError::TakeWhileM(m),
             )),
         })?;
@@ -181,7 +203,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::{Parser, Position};
+    use crate::{parser::Parser, Position};
 
     use super::*;
 
@@ -191,13 +213,6 @@ mod tests {
 
         assert_eq!(parser.parse("abc".into()), Ok(("abc", "".into())));
         assert_eq!(parser.parse("abcd".into()), Ok(("abc", "d".into())));
-        assert_eq!(
-            parser.parse("ab".into()),
-            Err(ParseError::eof_with(
-                Position::new(2, 1, 3),
-                CharacterError::Take(3)
-            ))
-        );
     }
 
     #[test]
@@ -206,17 +221,23 @@ mod tests {
 
         assert_eq!(
             parser.parse("ab".into()),
-            Err(ParseError::eof_with(
+            Err(ParseError::new(
                 Position::new(2, 1, 3),
+                code::ERR_TAKE,
                 CharacterError::Take(3)
             ))
         );
+
+        let error = parser.parse("".into()).expect_err("invalid input");
+
+        assert!(error.is_eof());
         assert_eq!(
-            parser.parse("".into()),
-            Err(ParseError::eof_with(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
                 Position::new(0, 1, 1),
+                code::ERR_TAKE,
                 CharacterError::Take(3)
-            ))
+            )
         );
     }
 
@@ -249,12 +270,17 @@ mod tests {
                 CharacterError::TakeWhile1
             ))
         );
+
+        let error = parser.parse("".into()).expect_err("invalid input");
+
+        assert!(error.is_eof());
         assert_eq!(
-            parser.parse("".into()),
-            Err(ParseError::eof_with(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
                 Position::new(0, 1, 1),
+                code::ERR_TAKE_WHILE_1,
                 CharacterError::TakeWhile1
-            ))
+            )
         );
     }
 
@@ -300,12 +326,17 @@ mod tests {
                 CharacterError::TakeWhileM(2)
             ))
         );
+
+        let error = parser.parse("".into()).expect_err("invalid input");
+
+        assert!(error.is_eof());
         assert_eq!(
-            parser.parse("".into()),
-            Err(ParseError::eof_with(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
                 Position::new(0, 1, 1),
+                code::ERR_TAKE_WHILE_M,
                 CharacterError::TakeWhileM(2)
-            ))
+            )
         );
     }
 }

@@ -1,18 +1,16 @@
-use crate::parser::{code, Input, Parser, ParseResult, Span};
+use crate::parser::{code, Input, ParseResult, Parser, Span};
 
 use super::SequenceError;
 
 /// Creates a parser that parses `prefix` followed by `element` followed by
 /// `postfix`. The parser will return the result of `element`.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, SequenceError, code, Input, Span}};
 /// let mut parser = delimited(char('('), tag("let"), char(')'));
-/// 
+///
 /// assert_eq!(parser.parse("(let)".into()), Ok(("let", Input::from(""))));
 /// assert_eq!(parser.parse("let)".into()), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
@@ -29,8 +27,15 @@ use super::SequenceError;
 ///     code::ERR_TERMINATED,
 ///     SequenceError::Terminated
 /// )));
-/// assert_eq!(parser.parse("(let".into()),
-///     Err(ParseError::eof(Position::new(4, 1, 5))));
+/// 
+/// let error = parser.parse("(let".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Span::new(Position::new(0, 1, 1), Position::new(4, 1, 5)),
+///     code::ERR_TERMINATED,
+///     SequenceError::Terminated,
+/// ));
 /// ```
 pub fn delimited<'a, 'b, F1, F2, F3, O1, O2, O3>(
     mut prefix: F1,
@@ -57,7 +62,7 @@ where
         let (output, cursor) = element.parse(cursor)?;
         let (_, cursor) = postfix.parse(cursor).map_err(|mut err| {
             err.push(
-                Span::new(input.position(), err.span().end()),
+                Span::new(input.position(), cursor.position()), //err.span().end()),
                 code::ERR_TERMINATED,
                 SequenceError::Terminated,
             );
@@ -72,7 +77,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{character::CharacterError, prelude::*, ParseError, Position};
+    use crate::{
+        parser::{character::CharacterError, prelude::*, ParseError},
+        Position,
+    };
 
     #[test]
     fn delimited_success() {
@@ -126,6 +134,14 @@ mod tests {
         let error = delimited(char('('), tag("let"), char(')'))(Input::new("(let"))
             .expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(4, 1, 5)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(4, 1, 5)).and(
+                Span::new(Position::new(0, 1, 1), Position::new(4, 1, 5)),
+                code::ERR_TERMINATED,
+                SequenceError::Terminated
+            )
+        );
     }
 }

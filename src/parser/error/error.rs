@@ -1,6 +1,6 @@
 use std::{error::Error as StdError, fmt};
 
-use crate::parser::{Position, Span};
+use crate::{parser::{Input, Span}, Position};
 
 use super::{
     cause::Cause,
@@ -18,10 +18,17 @@ const UNEXPECTED_END_OF_FILE: &str = "unexpected end of file";
 /// stack. When printed with [`Debug`](std::fmt::Debug), the whole error stack
 /// is printed.
 ///
-/// If only a single cause is printed, a [`Cause`] in the stack which indicates
-/// an unexpected end of file is preferred. If no such [`Cause`] exists, the
-/// latest [`Cause`] is printed. See [`cause()`](ParseError) how the latest
-/// [`Cause`] is determined.
+/// The error stack can be chained with new [`Cause`]s. This is useful when
+/// parsing nested structures. For example, when parsing a list of items, the
+/// error stack can be chained with a [`Cause`] which indicates an unexpected
+/// end of file and a [`Cause`] which indicates that the expected item is
+/// missing.
+/// 
+/// An error can be set to be semantic. A semantic error should be used when the
+/// error is not caused by the input but by the semantic of the input. A
+/// semantic error implies that the input was read correctly until to the end.
+/// For example, a number may be syntactically correct but it may be out of
+/// range.
 pub struct ParseError {
     /// Index of the latest Cause in the error stack which indicates an
     /// unexpected end of file.
@@ -30,6 +37,7 @@ pub struct ParseError {
     stack: Vec<Cause>,
     /// The optional source of the error.
     source: Option<Box<dyn StdError + 'static>>,
+    semantic: bool,
 }
 
 impl ParseError {
@@ -46,7 +54,20 @@ impl ParseError {
             eof: if code == ERR_EOF { Some(0) } else { None },
             stack: vec![Cause::new(span, code, message)],
             source: None,
+            semantic: false,
         }
+    }
+
+    /// Creates a new `ParseError` at the position of the given `input` with the
+    /// given `code` and `message`. If the `input` is at the end of file, the
+    /// error is chained with a [`Cause`] which indicates an
+    /// unexpected end of file and a [`Cause`] with the given `code` and
+    /// `message`.
+    pub fn new_at(input: Input, code: Code, message: impl fmt::Display) -> Self {
+        if input.is_eof() {
+            return Self::eof(input).and(input, code, message);
+        }
+        Self::new(input, code, message)
     }
 
     /// Creates a new `ParseError` at the given `pos` which indicates an
@@ -55,19 +76,38 @@ impl ParseError {
     /// The error stack is initialized with a single [`Cause`].
     #[inline]
     pub fn eof(pos: impl Into<Position>) -> Self {
-        Self::eof_with(pos.into(), UNEXPECTED_END_OF_FILE)
+        Self::new(pos.into(), ERR_EOF, UNEXPECTED_END_OF_FILE)
     }
 
-    /// Creates a new `ParseError` at the given `pos` which indicates an
-    /// unexpected end of file with the given `message`.
-    ///
-    /// The error stack is initialized with a single [`Cause`].
-    #[inline]
-    pub fn eof_with<M>(pos: impl Into<Position>, message: M) -> Self
+    /// Chaining a new [`Cause`] onto the error stack with the given `span`,
+    /// `code` and `message`.
+    pub fn and<S, M>(self, span: S, code: Code, message: M) -> Self
     where
+        S: Into<Span>,
         M: fmt::Display,
     {
-        Self::new(pos.into(), ERR_EOF, message)
+        let mut this = self;
+        this.push(span, code, message);
+        this
+    }
+
+    /// Sets the error to be semantic and chaining it.
+    /// 
+    /// A semantic error should be used when the error is not caused by the
+    /// input but by the semantic of the input. A semantic error implies that
+    /// the input was read correctly until to the end. For example, a number may
+    /// syntactically correct but it may be out of range.
+    pub fn and_semantic(self) -> Self {
+        let mut this = self;
+        this.set_semantic();
+        this
+    }
+
+    /// Sets the source of the error and chaining it.
+    pub fn and_source(self, source: impl StdError + 'static) -> Self {
+        let mut this = self;
+        this.set_source(source);
+        this
     }
 
     /// Pushes a new [`Cause`] onto the error stack with the given `span`,
@@ -90,26 +130,10 @@ impl ParseError {
         self.push(pos.into(), ERR_EOF, UNEXPECTED_END_OF_FILE);
     }
 
-    /// Pushes a new [`Cause`] onto the error stack at the given `pos` which
-    /// indicates an unexpected end of file with the given `message`.
-    #[inline]
-    pub fn push_eof_with<M>(&mut self, pos: impl Into<Position>, message: M)
-    where
-        M: fmt::Display,
-    {
-        self.push(pos.into(), ERR_EOF, message);
-    }
-
-    /// If the error stack contains a [`Cause`] which indicates an unexpected
-    /// end of file, the latest [`Cause`] with the code [`ERR_EOF`] is returned.
-    /// Otherwise the top most [`Cause`] is returned.
+    /// The top most [`Cause`] is returned.
     #[inline]
     pub fn cause(&self) -> &Cause {
-        if let Some(cause) = self.eof.as_ref().map(|i| &self.stack[*i as usize]) {
-            cause
-        } else {
-            self.stack.last().expect("empty error stack")
-        }
+        self.stack.last().expect("empty error stack")
     }
 
     /// Returns an iterator over the [`Cause`]s in the error stack in reverse
@@ -119,22 +143,19 @@ impl ParseError {
         self.stack.iter().rev()
     }
 
-    /// Returns the [`Span`] of the latest [`Cause`] in the error stack. See
-    /// [`cause()`](ParseError) how the latest [`Cause`] is determined.
+    /// Returns the [`Span`] of the latest [`Cause`] in the error stack.
     #[inline]
     pub fn span(&self) -> Span {
         self.cause().span()
     }
 
-    /// Returns the error code of the latest [`Cause`] in the error stack. See
-    /// [`cause()`](ParseError) how the latest [`Cause`] is determined.
+    /// Returns the error code of the latest [`Cause`] in the error stack.
     #[inline]
     pub fn code(&self) -> Code {
         self.cause().code()
     }
 
     /// Returns the error message of the latest [`Cause`] in the error stack.
-    /// See [`cause()`](ParseError) how the latest [`Cause`] is determined.
     #[inline]
     pub fn message(&self) -> &str {
         self.cause().message()
@@ -145,6 +166,28 @@ impl ParseError {
     #[inline]
     pub fn is_eof(&self) -> bool {
         self.eof.is_some()
+    }
+
+    /// Returns `true` if the error is semantic.
+    /// 
+    /// A semantic error should be set when the error is not caused by the
+    /// input but by the semantic of the input. A semantic error implies that
+    /// the input was read correctly until to the end. For example, a number may
+    /// syntactically correct but it may be out of range.
+    #[inline]
+    pub const fn is_semantic(&self) -> bool {
+        self.semantic
+    }
+
+    /// Sets the error to be semantic.
+    /// 
+    /// A semantic error should be set when the error is not caused by the
+    /// input but by the semantic of the input. A semantic error implies that
+    /// the input was read correctly until to the end. For example, a number may
+    /// syntactically correct but it may be out of range.
+    #[inline]
+    pub fn set_semantic(&mut self) {
+        self.semantic = true;
     }
 
     /// Sets the source of the error to the given `source`. Returned by

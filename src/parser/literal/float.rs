@@ -3,9 +3,9 @@ use crate::parser::{code, prelude::*, Input, ParseError, ParseResult};
 use super::LiteralError;
 
 /// Recognizes a floating-point number exponent.
-/// 
+///
 /// # Grammar:
-/// 
+///
 /// ```text
 /// Exp = [eE] Sign? Digit+
 /// ```
@@ -26,11 +26,11 @@ pub fn recognize_exponent(input: Input<'_>) -> ParseResult<'_, &str> {
 }
 
 /// Recognizes a floating-point number literal.
-/// 
+///
 /// If `signed` is `true` the literal can have an optional sign `[+\-]`.
 ///
 /// # Grammar:
-/// 
+///
 /// ```text
 /// Float  = Sign? ( 'inf' | 'infinity' | 'nan' | 'NaN' | Number )
 /// Number = Digit+ Exp | ( Digit+ '.' Digit* | Digit* '.' Digit+ ) Exp?
@@ -78,17 +78,17 @@ pub fn recognize_float(signed: bool) -> impl FnMut(Input<'_>) -> ParseResult<'_,
 }
 
 /// Parses a floating-point number literal.
-/// 
+///
 /// If `signed` is `true` the literal can have an optional sign `[+\-]`.
-/// 
+///
 /// The grammar is the same as [`recognize_float`] expect that it parses the
 /// value instead of recognizing it. Returns the value as a `f64`.
 pub fn float(signed: bool) -> impl FnMut(Input<'_>) -> ParseResult<'_, f64> {
     move |input| {
         let (output, cursor) = recognize_float(signed)(input)?;
-        let value = output
-            .parse::<f64>()
-            .map_err(|_| ParseError::new(cursor, code::ERR_FLOAT, LiteralError::Float))?;
+        let value = output.parse::<f64>().map_err(|_| {
+            ParseError::new(cursor, code::ERR_FLOAT, LiteralError::Float).and_semantic()
+        })?;
 
         Ok((value, cursor))
     }

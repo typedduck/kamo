@@ -1,9 +1,9 @@
-use crate::parser::{code, Input, Parser, ParseResult};
+use crate::parser::{code, Input, ParseResult, Parser};
 
 use super::SequenceError;
 
 /// The `Tuple` trait is for parsing a sequence of parsers.
-/// 
+///
 /// The `Tuple` trait is implemented by tuples of parsers. It is used to parse
 /// a sequence of multiple parsers and is used to implement the [`tuple()`]
 /// parser combinator. It is implemented for tuples of parsers up to a length of
@@ -146,20 +146,20 @@ tuple_impl!(1: out2, O2, F2; 2: out3, O3, F3; 3: out4, O4, F4; 4: out5, O5, F5; 
 
 /// The `tuple` parser combinator parses a sequence of multiple parsers and
 /// returns a tuple of the results of the parsers.
-/// 
+///
 /// It is implemented using the [`Tuple`] trait. It is implemented for tuples of
 /// parsers up to a length of 16. Every parser can have a different output type.
 /// If the tuple is empty, the parser will return `()`. The parser fails if any
 /// of the parsers fail.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = tuple((char('a'), char('b')));
-/// 
+///
 /// assert_eq!(parser(Input::new("ab")), Ok((('a', 'b'), Input::new(""))));
 /// assert_eq!(parser(Input::new("ba")), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
@@ -171,10 +171,24 @@ tuple_impl!(1: out2, O2, F2; 2: out3, O3, F3; 3: out4, O4, F4; 4: out5, O5, F5; 
 ///     code::ERR_TUPLE,
 ///     SequenceError::Tuple(1, 2)
 /// )));
-/// assert_eq!(parser(Input::new("a")), Err(ParseError::eof(
-///     Position::new(1, 1, 2))));
-/// assert_eq!(parser(Input::new("")), Err(ParseError::eof(
-///     Position::new(0, 1, 1))));
+/// 
+/// let error = parser(Input::new("a")).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///    Position::new(1, 1, 2),
+///    code::ERR_TUPLE,
+///    SequenceError::Tuple(2, 2)
+/// ));
+/// 
+/// let error = parser(Input::new("")).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_TUPLE,
+///     SequenceError::Tuple(1, 2)
+/// ));
 /// ```
 pub fn tuple<'a, 'b, O, T>(mut tuple: T) -> impl FnMut(Input<'a>) -> ParseResult<'a, O>
 where
@@ -188,7 +202,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{prelude::*, ParseError, Position};
+    use crate::{
+        parser::{prelude::*, ParseError},
+        Position,
+    };
 
     #[test]
     fn tuple_0() {
@@ -226,7 +243,15 @@ mod tests {
 
         let error = tuple((char('a'),))(Input::new("")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_TUPLE,
+                SequenceError::Tuple(0, 1)
+            )
+        );
     }
 
     #[test]
@@ -261,10 +286,26 @@ mod tests {
 
         let error = tuple((char('a'), char('b')))(Input::new("")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_TUPLE,
+                SequenceError::Tuple(1, 2)
+            )
+        );
 
         let error = tuple((char('a'), char('b')))(Input::new("a")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(1, 1, 2)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(1, 1, 2)).and(
+                Position::new(1, 1, 2),
+                code::ERR_TUPLE,
+                SequenceError::Tuple(1, 2)
+            )
+        );
     }
 }

@@ -6,11 +6,11 @@ use super::CharacterError;
 ///
 /// The predicate is a closure or function that takes a character and returns a
 /// boolean.
-/// 
+///
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = satisfy(|ch| ch.is_ascii_alphabetic());
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
@@ -39,7 +39,7 @@ where
                 ))
             }
         } else {
-            Err(ParseError::eof_with(input, CharacterError::Satisfy))
+            Err(ParseError::eof(input).and(input, code::ERR_SATISFY, CharacterError::Satisfy))
         }
     }
 }
@@ -49,12 +49,19 @@ where
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = any_char;
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
-/// assert_eq!(parser.parse("".into()),
-///     Err(ParseError::eof(Position::new(0, 1, 1))));
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_ANY_CHAR,
+///     CharacterError::AnyChar,
+/// ));
 /// ```
 pub fn any_char(input: Input<'_>) -> ParseResult<char> {
     if let Some(ch) = input.current() {
@@ -63,7 +70,7 @@ pub fn any_char(input: Input<'_>) -> ParseResult<char> {
         cursor.advance();
         Ok((ch, cursor))
     } else {
-        Err(ParseError::eof_with(input, CharacterError::AnyChar))
+        Err(ParseError::eof(input).and(input, code::ERR_ANY_CHAR, CharacterError::AnyChar))
     }
 }
 
@@ -72,7 +79,7 @@ pub fn any_char(input: Input<'_>) -> ParseResult<char> {
 /// # Example
 ///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = char('a');
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
@@ -81,8 +88,15 @@ pub fn any_char(input: Input<'_>) -> ParseResult<char> {
 ///     code::ERR_CHAR,
 ///     CharacterError::Char('b')
 /// )));
-/// assert_eq!(parser.parse("".into()),
-///     Err(ParseError::eof(Position::new(0, 1, 1))));
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_CHAR,
+///     CharacterError::Char('a'),
+/// ));
 /// ```
 pub const fn char(value: char) -> impl Fn(Input) -> ParseResult<char> + Copy {
     move |mut input| match input.advance_if(|ch| ch == value) {
@@ -92,18 +106,18 @@ pub const fn char(value: char) -> impl Fn(Input) -> ParseResult<char> + Copy {
             code::ERR_CHAR,
             CharacterError::Char(value),
         )),
-        None => Err(ParseError::eof_with(input, CharacterError::Char(value))),
+        None => Err(ParseError::eof(input).and(input, code::ERR_CHAR, CharacterError::Char(value))),
     }
 }
 
 /// Matches the given string.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = tag("abc");
-/// 
+///
 /// assert_eq!(parser.parse("abc".into()), Ok(("abc", "".into())));
 /// assert_eq!(parser.parse("abcd".into()), Ok(("abc", "d".into())));
 /// assert_eq!(parser.parse("dabc".into()), Err(ParseError::new(
@@ -111,11 +125,15 @@ pub const fn char(value: char) -> impl Fn(Input) -> ParseResult<char> + Copy {
 ///     code::ERR_TAG,
 ///     CharacterError::Tag("abc")
 /// )));
-/// assert_eq!(parser.parse("ab".into()), Err(ParseError::new(
+/// 
+/// let error = parser.parse("ab".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
 ///     Position::new(2, 1, 3),
-///     code::ERR_EOF,
-///     CharacterError::Tag("abc")
-/// )));
+///     code::ERR_TAG,
+///     CharacterError::Tag("abc"),
+/// ));
 /// ```
 pub fn tag(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, &'a str> {
     move |input| {
@@ -133,7 +151,11 @@ pub fn tag(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a,
                     ));
                 }
             } else {
-                return Err(ParseError::eof_with(cursor, CharacterError::Tag(value)));
+                return Err(ParseError::eof(input).and(
+                    cursor,
+                    code::ERR_TAG,
+                    CharacterError::Tag(value),
+                ));
             }
         }
         Ok((
@@ -144,21 +166,28 @@ pub fn tag(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a,
 }
 
 /// Matches any character except the ones specified.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = none_of("abc");
-/// 
+///
 /// assert_eq!(parser.parse("def".into()), Ok(('d', "ef".into())));
 /// assert_eq!(parser.parse("abc".into()), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
 ///     code::ERR_NONE_OF,
 ///     CharacterError::NoneOf("abc")
 /// )));
-/// assert_eq!(parser.parse("".into()),
-///     Err(ParseError::eof(Position::new(0, 1, 1))));
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_NONE_OF,
+///     CharacterError::NoneOf("abc"),
+/// ));
 /// ```
 pub fn none_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, char> {
     move |input| {
@@ -176,27 +205,38 @@ pub fn none_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResul
                 Ok((ch, cursor))
             }
         } else {
-            Err(ParseError::eof_with(input, CharacterError::NoneOf(values)))
+            Err(ParseError::eof(input).and(
+                input,
+                code::ERR_NONE_OF,
+                CharacterError::NoneOf(values),
+            ))
         }
     }
 }
 
 /// Matches any character of the ones specified.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = one_of("abc");
-/// 
+///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
 /// assert_eq!(parser.parse("def".into()), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
 ///     code::ERR_ONE_OF,
 ///     CharacterError::OneOf("abc")
 /// )));
-/// assert_eq!(parser.parse("".into()),
-///     Err(ParseError::eof(Position::new(0, 1, 1))));
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_ONE_OF,
+///     CharacterError::OneOf("abc"),
+/// ));
 /// ```
 pub fn one_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, char> {
     move |input| {
@@ -214,8 +254,9 @@ pub fn one_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult
                 ))
             }
         } else {
-            Err(ParseError::eof_with(
+            Err(ParseError::eof(input).and(
                 input.position(),
+                code::ERR_ONE_OF,
                 CharacterError::OneOf(values),
             ))
         }
@@ -223,21 +264,26 @@ pub fn one_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult
 }
 
 /// Matches any character until one of the specified characters is found.
-/// 
+///
 /// # Example
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{prelude::*, CharacterError, code, Position};
+/// # use kamo::{Position, parser::{prelude::*, CharacterError, code}};
 /// let mut parser = is_not("abc");
-/// 
+///
 /// assert_eq!(parser.parse("defa".into()), Ok(("def", "a".into())));
 /// assert_eq!(parser.parse("defb".into()), Ok(("def", "b".into())));
 /// assert_eq!(parser.parse("defc".into()), Ok(("def", "c".into())));
-/// assert_eq!(parser.parse("def".into()), Err(ParseError::new(
+/// 
+/// let error = parser.parse("def".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
 ///     Position::new(3, 1, 4),
-///     code::ERR_EOF,
-///     CharacterError::IsNot("abc")
-/// )));
+///     code::ERR_IS_NOT,
+///     CharacterError::IsNot("abc"),
+/// ));
+/// ```
 pub fn is_not(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, &'a str> {
     move |input| {
         let mut cursor = input;
@@ -250,7 +296,11 @@ pub fn is_not(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<
         }
 
         if cursor.is_eof() {
-            return Err(ParseError::eof_with(cursor, CharacterError::IsNot(value)));
+            return Err(ParseError::eof(input).and(
+                cursor,
+                code::ERR_IS_NOT,
+                CharacterError::IsNot(value),
+            ));
         }
 
         let output = &input.as_str()[..(cursor.position().offset() - input.position().offset())];
@@ -261,7 +311,7 @@ pub fn is_not(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::Position;
+    use crate::Position;
 
     use super::*;
 
@@ -278,7 +328,15 @@ mod tests {
     fn anychar_failure() {
         let error = any_char(Input::new("")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_ANY_CHAR,
+                CharacterError::AnyChar
+            )
+        );
     }
 
     #[test]
@@ -305,7 +363,15 @@ mod tests {
 
         let error = char('a')(Input::new("")).expect_err("invalid output");
 
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_CHAR,
+                CharacterError::Char('b')
+            )
+        );
     }
 
     #[test]
@@ -354,11 +420,12 @@ mod tests {
 
         let error = tag("def")(Input::new("de")).expect_err("invalid output");
 
+        assert!(error.is_eof());
         assert_eq!(
             error,
-            ParseError::new(
+            ParseError::eof(Position::new(2, 1, 3)).and(
                 Position::new(2, 1, 3),
-                code::ERR_EOF,
+                code::ERR_TAG,
                 CharacterError::Tag("def")
             )
         );
@@ -441,11 +508,12 @@ mod tests {
     fn is_not_failure() {
         let error = is_not("abc")(Input::new("def")).expect_err("invalid output");
 
+        assert!(error.is_eof());
         assert_eq!(
             error,
-            ParseError::new(
+            ParseError::eof(Position::new(3, 1, 4)).and(
                 Position::new(3, 1, 4),
-                code::ERR_EOF,
+                code::ERR_IS_NOT,
                 CharacterError::IsNot("abc")
             )
         );

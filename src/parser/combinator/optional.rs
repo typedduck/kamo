@@ -1,13 +1,13 @@
-use crate::parser::{Input, Parser, ParseResult};
+use crate::parser::{Input, ParseResult, Parser};
 
 /// Makes a parser optional.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
 /// # use kamo::parser::{prelude::*, Input};
 /// let mut parser = opt(char('a'));
-/// 
+///
 /// assert_eq!(parser.parse("abc".into()), Ok((Some('a'), Input::from("bc"))));
 /// assert_eq!(parser.parse("bc".into()), Ok((None, Input::from("bc"))));
 /// assert_eq!(parser.parse("".into()), Ok((None, Input::from(""))));
@@ -27,7 +27,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{prelude::*, Position};
+    use crate::{parser::prelude::*, Position};
 
     #[test]
     fn opt_none() {

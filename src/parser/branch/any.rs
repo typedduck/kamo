@@ -1,15 +1,22 @@
-use crate::parser::{code, Input, ParseError, Parser, ParseResult};
+use crate::parser::{code, Input, ParseError, ParseResult, Parser};
 
 use super::BranchError;
 
 /// The `Any` trait is for parsing a choice of multiple parsers.
-/// 
+///
 /// The `Any` trait is implemented by tuples of parsers. It is used to parse a
 /// choice of multiple parsers. It is used to implement the [`any()`] parser
 /// combinator. It is implemented for tuples of parsers up to a length of 16.
 /// The parsers are tried in order. If a parser fails, the next parser is tried.
-/// If all parsers fail, an error is returned. The output-type of all parsers
-/// must be the same.
+///
+/// If all parsers fail, an error is returned indicating that no parser matched.
+/// If one of the parsers hits the end of the input, and end of file cause is
+/// appended to the error.
+///
+/// If a parser fails with a semantic error, the error of that element is
+/// returned.
+///
+/// The output-type of all parsers must be the same.
 pub trait Any<'a, 'b, O>
 where
     O: 'b,
@@ -33,7 +40,12 @@ macro_rules! any_branch {
             Ok(out) => {
                 return Ok(out);
             }
-            Err(err) => err.is_eof(),
+            Err(err) => {
+                if err.is_semantic() {
+                    return Err(err);
+                }
+                err.is_eof()
+            }
         }
     };
 }
@@ -54,10 +66,8 @@ macro_rules! any_impl {
 
 
                 if hit_eof || input.is_eof() {
-                    let mut err = ParseError::eof(input);
-
-                    err.push(input, code::ERR_ANY, BranchError::NoMatch);
-                    return Err(err)
+                    return Err(ParseError::eof(input)
+                        .and(input, code::ERR_ANY, BranchError::NoMatch))
                 }
                 Err(ParseError::new(input, code::ERR_ANY, BranchError::NoMatch))
             }
@@ -91,20 +101,26 @@ any_impl!(0: F1; 1: F2; 2: F3; 3: F4; 4: F5; 5: F6; 6: F7; 7: F8; 8: F9;
     9: F10; 10: F11; 11: F12; 12: F13; 13: F14; 14: F15; 15: F16 => O);
 
 /// The `any` parser combinator is used to parse a choice of multiple parsers.
-/// 
+///
 /// It is implemented using the `Any` trait. It is implemented for tuples of
 /// parsers up to a length of 16. The parsers are tried in order. If a parser
-/// fails, the next parser is tried. If all parsers fail, an error is returned.
-/// The result of all parsers must be the same.
-/// 
+/// fails, the next parser is tried.
+///
+/// If all parsers fail, an error is returned indicating that no parser matched.
+/// If one of the parsers hits the end of the input, and end of file cause is
+/// appended to the error.
+///
+/// If a parser fails with a semantic error, the error of that element is
+/// returned.
+///
+/// The output-type of all parsers must be the same.
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, BranchError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::*, BranchError, code, Input}};
 /// let mut parser = any((char('a'), char('b')));
-/// 
+///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', Input::from("bc"))));
 /// assert_eq!(parser.parse("bac".into()), Ok(('b', Input::from("ac"))));
 /// assert_eq!(parser.parse("cab".into()), Err(ParseError::new(
@@ -112,8 +128,6 @@ any_impl!(0: F1; 1: F2; 2: F3; 3: F4; 4: F5; 5: F6; 6: F7; 7: F8; 8: F9;
 ///     code::ERR_ANY,
 ///     BranchError::NoMatch
 /// )));
-/// assert_eq!(parser.parse("".into()),
-///     Err(ParseError::eof(Position::new(0, 1, 1))));
 /// ```
 pub fn any<'a, 'b, O, L>(mut any: L) -> impl FnMut(Input<'a>) -> ParseResult<'a, O>
 where
@@ -127,7 +141,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{prelude::*, Position};
+    use crate::{parser::prelude::*, Position};
 
     #[test]
     fn any_0() {
@@ -157,30 +171,32 @@ mod tests {
 
         assert_eq!(
             error,
-            ParseError::new(
+            ParseError::new(Position::new(0, 1, 1), code::ERR_ANY, BranchError::NoMatch)
+        );
+
+        let error = any((char('a'),))(Input::new("")).expect_err("invalid output");
+
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
                 Position::new(0, 1, 1),
                 code::ERR_ANY,
                 BranchError::NoMatch
             )
         );
-
-        let error = any((char('a'),))(Input::new("")).expect_err("invalid output");
-
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
     }
 
     #[test]
     fn any_2() {
-        let (output, input) =
-            any((char('a'), char('b')))(Input::new("abc")).expect("valid output");
+        let (output, input) = any((char('a'), char('b')))(Input::new("abc")).expect("valid output");
 
         assert_eq!(output, 'a');
         assert_eq!(input, Input::from("bc"));
         assert_eq!(input.current(), Some('b'));
         assert_eq!(input.position(), Position::new(1, 1, 2));
 
-        let (output, input) =
-            any((char('a'), char('b')))(Input::new("bac")).expect("valid output");
+        let (output, input) = any((char('a'), char('b')))(Input::new("bac")).expect("valid output");
 
         assert_eq!(output, 'b');
         assert_eq!(input, Input::from("ac"));
@@ -191,15 +207,19 @@ mod tests {
 
         assert_eq!(
             error,
-            ParseError::new(
+            ParseError::new(Position::new(0, 1, 1), code::ERR_ANY, BranchError::NoMatch)
+        );
+
+        let error = any((char('a'), char('b')))(Input::new("")).expect_err("invalid output");
+
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
                 Position::new(0, 1, 1),
                 code::ERR_ANY,
                 BranchError::NoMatch
             )
         );
-
-        let error = any((char('a'), char('b')))(Input::new("")).expect_err("invalid output");
-
-        assert_eq!(error, ParseError::eof(Position::new(0, 1, 1)));
     }
 }

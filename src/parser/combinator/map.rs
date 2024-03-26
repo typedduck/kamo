@@ -7,9 +7,7 @@ use crate::parser::{Input, Parser, ParseResult};
 /// # Examples
 /// 
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, code, CharacterError, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::*, code, CharacterError, Input}};
 /// let mut parser = map(char('a'), |c| c as u8);
 /// 
 /// assert_eq!(parser.parse("abc".into()), Ok((97, Input::from("bc"))));
@@ -18,8 +16,15 @@ use crate::parser::{Input, Parser, ParseResult};
 ///     code::ERR_CHAR,
 ///     CharacterError::Char('a')
 /// )));
-/// assert_eq!(parser.parse("".into()),
-///     Err(ParseError::eof(Position::new(0, 1, 1))));
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_CHAR,
+///     CharacterError::Char('a'),
+/// ));
 /// ```
 pub fn map<'a, 'b, O1, O2, F, G>(mut f: F, g: G) -> impl FnMut(Input<'a>) -> ParseResult<'a, O2>
 where
@@ -41,9 +46,7 @@ where
 /// # Examples
 /// 
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, code, CharacterError, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::*, code, CharacterError, Input}};
 /// let mut parser = map2(char('a'), |c, input| (c as u8, input));
 /// 
 /// assert_eq!(parser.parse("abc".into()),
@@ -53,16 +56,25 @@ where
 ///     code::ERR_CHAR,
 ///     CharacterError::Char('a')
 /// )));
-/// assert_eq!(parser.parse("".into()),
-///     Err(ParseError::eof(Position::new(0, 1, 1))));
+/// 
+/// let error = parser.parse("".into()).expect_err("error output");
+///
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
+///     Position::new(0, 1, 1),
+///     code::ERR_CHAR,
+///     CharacterError::Char('a'),
+/// ));
 /// ```
 pub fn map2<'a, 'b, O1, O2, F, G>(mut f: F, g: G) -> impl FnMut(Input<'a>) -> ParseResult<'a, O2>
 where
     O1: 'b + fmt::Debug,
     O2: 'b,
     F: Parser<'a, 'b, O1>,
-    G: Fn(O1, Input<'a>) -> O2,
+    G: FnMut(O1, Input<'a>) -> O2,
 {
+    let mut g = g;
+    
     move |input| {
         let (value, cursor) = f.parse(input)?;
 

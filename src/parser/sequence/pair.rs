@@ -1,18 +1,18 @@
-use crate::parser::{code, Input, Parser, ParseResult};
+use crate::parser::{code, Input, ParseResult, Parser};
 
 use super::SequenceError;
 
 /// Creates a parser that parses two values in sequence. The parser will return
 /// a tuple of the two values.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = pair(char('a'), char('b'));
-/// 
+///
 /// assert_eq!(parser(Input::new("ab")), Ok((('a', 'b'), Input::new(""))));
 /// assert_eq!(parser(Input::new("ba")), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
@@ -24,11 +24,15 @@ use super::SequenceError;
 ///     code::ERR_PAIR_SECOND,
 ///     SequenceError::PairSecond
 /// )));
-/// assert_eq!(parser(Input::new("")), Err(ParseError::new(
+/// 
+/// let error = parser(Input::new("")).expect_err("error output");
+/// 
+/// assert!(error.is_eof());
+/// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_PAIR_FIRST,
 ///     CharacterError::Char('a')
-/// )));
+/// ));
 /// ```
 pub fn pair<'a, 'b, F, G, O1, O2>(
     mut first: F,
@@ -58,7 +62,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{prelude::*, ParseError, Position, CharacterError};
+    use crate::{
+        parser::{prelude::*, CharacterError, ParseError},
+        Position,
+    };
 
     #[test]
     fn pair_success() {
@@ -72,20 +79,33 @@ mod tests {
     fn pair_failure() {
         let mut parser = pair(char('a'), char('b'));
 
-        assert_eq!(parser(Input::new("ba")), Err(ParseError::new(
-            Position::new(0, 1, 1),
-            code::ERR_PAIR_FIRST,
-            SequenceError::PairFirst
-        )));
-        assert_eq!(parser(Input::new("aa")), Err(ParseError::new(
-            Position::new(1, 1, 2),
-            code::ERR_PAIR_SECOND,
-            SequenceError::PairSecond
-        )));
-        assert_eq!(parser(Input::new("")), Err(ParseError::new(
-            Position::new(0, 1, 1),
-            code::ERR_EOF,
-            CharacterError::Char('a')
-        )));
+        assert_eq!(
+            parser(Input::new("ba")),
+            Err(ParseError::new(
+                Position::new(0, 1, 1),
+                code::ERR_PAIR_FIRST,
+                SequenceError::PairFirst
+            ))
+        );
+        assert_eq!(
+            parser(Input::new("aa")),
+            Err(ParseError::new(
+                Position::new(1, 1, 2),
+                code::ERR_PAIR_SECOND,
+                SequenceError::PairSecond
+            ))
+        );
+
+        let error = parser(Input::new("")).expect_err("invalid input");
+
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_PAIR_FIRST,
+                CharacterError::Char('a')
+            )
+        );
     }
 }

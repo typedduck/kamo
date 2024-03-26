@@ -1,60 +1,79 @@
-use crate::parser::{code, Input, ParseResult, Parser};
+use crate::parser::{code, Input, ParseError, ParseResult, Parser};
 
-use super::SequenceError;
+use super::{fold_many_n, SequenceError};
 
-/// Counts the number of times a parser succeeds.
+/// Counts the number of times a parser succeeds. The parser must succeed zero
+/// or at most `n` times.
 ///
-/// When the parser for the element excepts an empty input and no progress is
-/// made, the parser returns an infinte loop error. Sequence parsers must make
-/// progress on every successful iteration.
-/// 
+/// Calls [`fold_many_n()`].
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
-/// let mut parser = many0_count(char('a'));
-/// 
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
+/// let mut parser = many_n_count(3, char('a'));
+///
+/// assert_eq!(parser(Input::new("aaaa")), Ok((3, Input::new("a"))));
 /// assert_eq!(parser(Input::new("aaa")), Ok((3, Input::new(""))));
 /// assert_eq!(parser(Input::new("aa")), Ok((2, Input::new(""))));
 /// assert_eq!(parser(Input::new("a")), Ok((1, Input::new(""))));
 /// assert_eq!(parser(Input::new("b")), Ok((0, Input::new("b"))));
 /// assert_eq!(parser(Input::new("")), Ok((0, Input::new(""))));
 /// ```
-pub fn many0_count<'a, 'b, F, O>(mut element: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, usize>
+#[inline]
+pub fn many_n_count<'a, 'b, F, O>(
+    n: usize,
+    item: F,
+) -> impl FnMut(Input<'a>) -> ParseResult<'a, usize>
 where
     O: 'b,
     F: Parser<'a, 'b, O>,
 {
-    move |input| {
-        let mut acc = 0;
-        let mut cursor = input;
+    fold_many_n(n, item, || 0, |acc, _, _| acc + 1)
+}
 
-        while let Ok((_, next)) = element.parse(cursor) {
-            infinite_loop_check!(cursor, next);
-            acc += 1;
-            cursor = next;
-        }
-        Ok((acc, cursor))
-    }
+/// Counts the number of times a parser succeeds.
+///
+/// Calls [`fold_many_n()`], `n` is set to `usize::MAX`.
+///
+/// # Examples
+///
+/// ```rust
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
+/// let mut parser = many0_count(char('a'));
+///
+/// assert_eq!(parser(Input::new("aaa")), Ok((3, Input::new(""))));
+/// assert_eq!(parser(Input::new("aa")), Ok((2, Input::new(""))));
+/// assert_eq!(parser(Input::new("a")), Ok((1, Input::new(""))));
+/// assert_eq!(parser(Input::new("b")), Ok((0, Input::new("b"))));
+/// assert_eq!(parser(Input::new("")), Ok((0, Input::new(""))));
+/// ```
+#[inline]
+pub fn many0_count<'a, 'b, F, O>(item: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, usize>
+where
+    O: 'b,
+    F: Parser<'a, 'b, O>,
+{
+    many_n_count(usize::MAX, item)
 }
 
 /// Counts the number of times a parser succeeds. The parser must succeed at
 /// least once.
 ///
-/// When the parser for the element excepts an empty input and no progress is
-/// made, the parser returns an infinte loop error. Sequence parsers must make
-/// progress on every successful iteration.
-/// 
+/// Calls [`fold_many_n()`], `n` is set to `usize::MAX`.
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = many1_count(char('a'));
-/// 
+///
 /// assert_eq!(parser(Input::new("aaa")), Ok((3, Input::new(""))));
 /// assert_eq!(parser(Input::new("aa")), Ok((2, Input::new(""))));
 /// assert_eq!(parser(Input::new("a")), Ok((1, Input::new(""))));
@@ -65,74 +84,69 @@ where
 /// )));
 /// assert_eq!(parser(Input::new("")), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_MANY_1_COUNT,
 ///     SequenceError::Many1
 /// )));
-pub fn many1_count<'a, 'b, F, O>(mut element: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, usize>
+pub fn many1_count<'a, 'b, F, O>(item: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, usize>
 where
     O: 'b,
     F: Parser<'a, 'b, O>,
 {
-    move |input| {
-        let (mut acc, mut cursor) = match element.parse(input) {
-            Ok((_, next)) => Ok((1, next)),
-            Err(mut err) => {
-                err.push(input, code::ERR_MANY_1_COUNT, SequenceError::Many1);
-                Err(err)
-            }
-        }?;
+    let mut count = many_n_count(usize::MAX, item);
 
-        infinite_loop_check!(input, cursor);
-        while let Ok((_, next)) = element.parse(cursor) {
-            infinite_loop_check!(cursor, next);
-            acc += 1;
-            cursor = next;
+    move |input| {
+        let (count, cursor) = count(input)?;
+
+        if count == 0 {
+            return Err(ParseError::new_at(
+                cursor,
+                code::ERR_MANY_1_COUNT,
+                SequenceError::Many1,
+            ));
         }
-        Ok((acc, cursor))
+        Ok((count, cursor))
     }
 }
 
 /// Counts the number of times a parser succeeds. The parser must succeed at
 /// least `m` times and at most `n` times.
 ///
-/// When the parser for the element excepts an empty input and no progress is
-/// made, the parser returns an infinte loop error. Sequence parsers must make
-/// progress on every successful iteration.
+/// Calls [`fold_many_n()`].
 ///
 /// # Panics
 ///
 /// Panics if `m` is greater than `n`.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = many_m_n_count(2, 3, char('a'));
-/// 
+///
 /// assert_eq!(parser(Input::new("aaa")), Ok((3, Input::new(""))));
 /// assert_eq!(parser(Input::new("aa")), Ok((2, Input::new(""))));
 /// assert_eq!(parser(Input::new("a")), Err(ParseError::new(
 ///     Position::new(1, 1, 2),
-///     code::ERR_EOF,
+///     code::ERR_MANY_M_COUNT,
 ///     SequenceError::ManyM(2)
 /// )));
 /// assert_eq!(parser(Input::new("b")), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_MANY_M,
+///     code::ERR_MANY_M_COUNT,
 ///     SequenceError::ManyM(2)
 /// )));
 /// assert_eq!(parser(Input::new("")), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_MANY_M_COUNT,
 ///     SequenceError::ManyM(2)
 /// )));
 /// ```
 pub fn many_m_n_count<'a, 'b, F, O>(
     m: usize,
     n: usize,
-    mut element: F,
+    item: F,
 ) -> impl FnMut(Input<'a>) -> ParseResult<'a, usize>
 where
     O: 'b,
@@ -140,44 +154,19 @@ where
 {
     assert!(m <= n, "m must be less than or equal to n");
 
+    let mut count = many_n_count(n, item);
+
     move |input| {
-        if n - m == 0 && n == 0 {
-            return Ok((0, input));
-        }
+        let (count, cursor) = count(input)?;
 
-        // If m is 0, then many are optional
-        let (mut acc, mut cursor) = if m == 0 {
-            if let Ok((_, cursor)) = element.parse(input) {
-                (1, cursor)
-            } else {
-                return Ok((0, input));
-            }
-        } else {
-            let (_, cursor) = element.parse(input).map_err(|mut err| {
-                err.push(input, code::ERR_MANY_M, SequenceError::ManyM(m));
-                err
-            })?;
-            (1, cursor)
-        };
-
-        infinite_loop_check!(input, cursor);
-        for i in 1..n {
-            match element.parse(cursor) {
-                Ok((_, next)) => {
-                    infinite_loop_check!(cursor, next);
-                    acc += 1;
-                    cursor = next;
-                }
-                Err(mut err) => {
-                    if i < m {
-                        err.push(cursor, code::ERR_MANY_M, SequenceError::ManyM(m));
-                        return Err(err);
-                    }
-                    return Ok((acc, cursor));
-                }
-            }
+        if count < m {
+            return Err(ParseError::new_at(
+                cursor,
+                code::ERR_MANY_M_COUNT,
+                SequenceError::ManyM(m),
+            ));
         }
-        Ok((acc, cursor))
+        Ok((count, cursor))
     }
 }
 
@@ -185,7 +174,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::parser::{prelude::*, ParseError, Position};
+    use crate::{
+        parser::{prelude::*, ParseError},
+        Position,
+    };
 
     #[test]
     fn many0_count_success() {
@@ -309,6 +301,18 @@ mod tests {
                 SequenceError::Many1
             )
         );
+
+        let error = many1_count(char('a'))(Input::new("")).expect_err("invalid input");
+
+        assert!(error.is_eof());
+        assert_eq!(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
+                Position::new(0, 1, 1),
+                code::ERR_MANY_1_COUNT,
+                SequenceError::Many1
+            )
+        );
     }
 
     #[test]
@@ -377,7 +381,7 @@ mod tests {
             error,
             ParseError::new(
                 Position::new(0, 1, 1),
-                code::ERR_MANY_M,
+                code::ERR_MANY_M_COUNT,
                 SequenceError::ManyM(2)
             )
         );
@@ -389,18 +393,19 @@ mod tests {
             error,
             ParseError::new(
                 Position::new(1, 1, 2),
-                code::ERR_MANY_M,
+                code::ERR_MANY_M_COUNT,
                 SequenceError::ManyM(2)
             )
         );
 
         let error = many_m_n_count(2, 3, char('a'))(Input::new("a")).expect_err("invalid input");
 
+        assert!(error.is_eof());
         assert_eq!(
             error,
-            ParseError::new(
+            ParseError::eof(Position::new(1, 1, 2)).and(
                 Position::new(1, 1, 2),
-                code::ERR_EOF,
+                code::ERR_MANY_M_COUNT,
                 SequenceError::ManyM(2)
             )
         );

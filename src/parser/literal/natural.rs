@@ -4,16 +4,16 @@ use super::{LiteralError, Radix};
 
 /// Recognizes a natural number literal with an optional sign `'+'` and the
 /// given radix.
-/// 
+///
 /// # Grammar:
-/// 
+///
 /// The grammar does not include a prefix for the radix. This is because the
 /// radix is already known when parsing the natural literal. You must implement
 /// the prefix yourself.
-/// 
+///
 /// The rules for `<Digit R>` are generic over `R` which expands to the radix
 /// of the natural literal.
-/// 
+///
 /// ```text
 /// Natural     = Sign? <Digit R>+
 /// Sign        = '+'
@@ -35,18 +35,19 @@ pub fn recognize_natural(radix: Radix) -> impl for<'a> Fn(Input<'a>) -> ParseRes
 
 /// Parses a natural number literal with an optional sign `'+'` and the given
 /// radix.
-/// 
+///
 /// The grammar is the same as the one for `recognize_natural` except that it
 /// parses the value instead of recognizing it. Returns the value as a `u64`.
-/// 
+///
 /// The grammar does not include a prefix for the radix. This is because the
 /// radix is already known when parsing the natural literal. You must implement
 /// the prefix yourself.
 pub fn natural(radix: Radix) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, u64> {
     move |input| {
         let (output, input) = recognize_natural(radix)(input)?;
-        let value = u64::from_str_radix(output, radix.base())
-            .map_err(|_| ParseError::new(input, code::ERR_NATURAL, LiteralError::Natural))?;
+        let value = u64::from_str_radix(output, radix.base()).map_err(|_| {
+            ParseError::new(input, code::ERR_NATURAL, LiteralError::Natural).and_semantic()
+        })?;
         Ok((value, input))
     }
 }

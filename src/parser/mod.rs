@@ -4,7 +4,7 @@
 //! on parsing UTF-8 text in a safe and mostly zero-copy way. It is designed to
 //! be used to implement parsers for programming languages. It is not designed
 //! to be used to parse binary data.
-//! 
+//!
 //! Therefore the parsers are only generic over the output type. The input and
 //! errors are defined by concrete types. The input is a wrapper around a string
 //! slice and keeps track of the current character and position while advancing.
@@ -55,7 +55,7 @@
 //! ### Example
 //!
 //! ```rust
-//! # use kamo::parser::{Input, Position};
+//! # use kamo::{Position, parser::Input};
 //! let mut input = Input::new("abc");
 //!
 //! assert_eq!(input.current(), Some('a'));
@@ -85,7 +85,7 @@
 //!   the same type of output and returns the output of the first parser that
 //!   succeeds. Currently there is one branching combinator: [`any()`].
 //! - **character combinators**. These are the most commonly used combinators.
-//!   There are specialized combinators for [ASCII characters](ascii), 
+//!   There are specialized combinators for [ASCII characters](ascii),
 //!   [Unicode code points](unicode), and combinators that match strings and
 //!   characters. An additional combinator is available if the
 //!   [`regex` feature](match_re) is enabled.
@@ -100,7 +100,7 @@
 //!   combinators are [`pair()`], [`tuple()`], [`list0()`], [`list1()`], [`many0()`], and
 //!   [`many1()`]. The [`fold_many0()`], [`fold_many1()`], [`fold_list0()`], and
 //!   [`fold_list1()`] combinators can be used to fold the output of the parsers.
-//! 
+//!
 //!
 //! ## The [`Parser`] trait.
 //!
@@ -108,24 +108,24 @@
 //! parser combinators. The trait is implemented for functions that take an
 //! [`Input`] and return a [`ParseResult`]. The trait is also implemented for
 //! boxed parsers.
-//! 
+//!
 //! The two implementations of the [`Parser`] trait makes it possible to use
 //! both functions and boxed parsers with the parser combinators. A simple
 //! parser can be implemented as a function and a more complex parser can be
 //! implemented as a struct that implements the [`Parser`] trait.
-//! 
+//!
 //! ### Example
-//! 
+//!
 //! ```rust
 //! # use kamo::parser::{prelude::*, Input};
 //! /// Parses a string of zero or more digits.
 //! fn digits(input: Input) -> ParseResult<&str> {
 //!     let mut input = input;
 //!     let output = input.advance_while(|c| c.is_ascii_digit());
-//! 
+//!
 //!     Ok((output, input))
 //! }
-//! 
+//!
 //! assert_eq!(digits.parse("123".into()), Ok(("123", "".into())));
 //! assert_eq!(digits.parse("abc".into()), Ok(("", "abc".into())));
 //! ```
@@ -135,7 +135,7 @@
 //! The result of a call to a parser. The result is either an `Ok` containing
 //! the output of the parser and the remaining input, or an `Err` containing the
 //! error that occurred.
-//! 
+//!
 //! The result is defined as a type alias for [`std::result::Result`] with the
 //! error type set to [`ParseError`]. This and the constraint on the input type
 //! simplifies the implementation of the parser combinators. But also
@@ -170,9 +170,7 @@
 //! ### Example
 //!
 //! ```rust
-//! # use kamo::parser::{
-//! #     prelude::*, CharacterError, code, Input, Position
-//! # };
+//! # use kamo::{Position, parser::{prelude::*, CharacterError, code, Input}};
 //! /// Parses a string of digits.
 //! fn digits(input: Input) -> ParseResult<&str> {
 //!     take_while1(|c| c.is_ascii_digit()).parse(input)
@@ -202,13 +200,11 @@
 //! matches the tag.
 //!
 //! ```rust
-//! # use kamo::parser::{
-//! #    prelude::*, CharacterError, code, Input, Position
-//! # };
+//! # use kamo::{Position, parser::{prelude::*, CharacterError, code, Input}};
 //! /// Parses a tag.
-//! fn tag<'a>(tag: &'static str) -> impl Fn(Input<'a>) -> 
+//! fn tag<'a>(tag: &'static str) -> impl Fn(Input<'a>) ->
 //!     ParseResult<'a, &'static str> {
-//! 
+//!
 //!     move |input| {
 //!         let mut input = input;
 //!         let mut tag = tag;
@@ -246,9 +242,6 @@ pub mod predicate;
 
 mod input;
 pub use input::Input;
-
-mod position;
-pub use position::Position;
 
 mod span;
 pub use span::Span;
@@ -305,12 +298,13 @@ pub mod prelude {
             take_while1, take_while_m_n, unicode,
         },
         combinator::{eof, map, map2, opt, recognize, value, verify},
-        error::{context, context_and, context_as},
+        error::{context, context_and, context_as, semantic},
         literal,
         sequence::{
-            delimited, fold_list0, fold_list1, fold_list_m_n, fold_many0, fold_many1,
-            fold_many_m_n, list0, list1, list_m_n, many0, many0_count, many1, many1_count,
-            many_m_n, many_m_n_count, pair, preceded, terminated, tuple,
+            delimited, fold_list0, fold_list1, fold_list_m_n, fold_list_n, fold_many0, fold_many1,
+            fold_many_m_n, fold_many_n, list0, list1, list_m_n, list_n, many0, many0_count, many1,
+            many1_count, many_m_n, many_m_n_count, many_n, many_n_count, pair, preceded,
+            terminated, tuple,
         },
         ParseError, ParseResult, Parser,
     };

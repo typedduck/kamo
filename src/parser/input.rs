@@ -1,11 +1,13 @@
 #[cfg(feature = "regex")]
 use regex::Regex;
 
-use super::{Position, TARGET};
+use crate::Position;
+
+use super::TARGET;
 
 /// A parser input. It is a wrapper around a string slice that keeps track of
 /// the current character and position.
-/// 
+///
 /// The input is advanced by calling `advance` or one of the `advance_*`
 /// functions. The current character can be accessed with `current` and the
 /// current position with `position`. It keeps track of newlines and the current
@@ -13,12 +15,12 @@ use super::{Position, TARGET};
 /// character is always a valid UTF-8 character. Lines and columns are counted
 /// in UTF-8 characters and not in bytes. The offset is always in bytes and
 /// counts the number of bytes read from the input.
-/// 
+///
 /// The underlying string slice can be accessed with `as_str`. The length of the
 /// remaining input in bytes can be accessed with `len` and if the input is
 /// empty with `is_empty`. If the end of input is reached `current` returns
 /// `None` and `is_eof` returns `true`.
-/// 
+///
 /// When advancing the slice is updated and the current character and position
 /// are updated. The current character is always at offset 0 in the slice.
 /// Therefore the offset returned by `position` is always the number of bytes
@@ -30,6 +32,7 @@ pub struct Input<'a> {
 }
 
 impl<'a> Input<'a> {
+    /// Creates a new input from a string slice.
     pub fn new(input: &'a str) -> Self {
         let current = if let Some((_, ch)) = Self::decode(input) {
             (Some(ch), Position::new(0, 1, 1), ch == '\n')
@@ -41,12 +44,21 @@ impl<'a> Input<'a> {
         Self { input, current }
     }
 
+    /// Creates a new input from an existing input. The new input is set to the
+    /// end of input. It preserves the current position and newline state.
+    pub fn eof_from(input: Input<'_>) -> Self {
+        let current = (None, input.position(), input.newline());
+
+        log::debug!(target: TARGET, "Input: eof input {:#}", current.1);
+        Self { input: "", current }
+    }
+
     /// Return the current character or `None` if end of input is reached.
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
-    /// 
+    ///
     /// assert_eq!(input.current(), Some('a'));
     /// assert_eq!(input.advance(), Some('b'));
     /// assert_eq!(input.current(), Some('b'));
@@ -61,11 +73,11 @@ impl<'a> Input<'a> {
     }
 
     /// Return the current position
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
-    /// 
+    ///
     /// assert_eq!(input.position().offset(), 0);
     /// assert_eq!(input.advance(), Some('b'));
     /// assert_eq!(input.position().offset(), 1);
@@ -82,11 +94,11 @@ impl<'a> Input<'a> {
     }
 
     /// Return if the current position marks a newline.
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc\n123");
-    /// 
+    ///
     /// assert!(!input.newline());
     /// assert_eq!(input.advance(), Some('b'));
     /// assert_eq!(input.advance(), Some('c'));
@@ -101,11 +113,11 @@ impl<'a> Input<'a> {
 
     /// Reads and returns the next charater. After the function returns the
     /// charater is the current. Returns `None` if end of input is reached.
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
-    /// 
+    ///
     /// assert_eq!(input.advance(), Some('b'));
     /// assert_eq!(input.advance(), Some('c'));
     /// assert_eq!(input.advance(), None);
@@ -149,63 +161,65 @@ impl<'a> Input<'a> {
     /// Advances to the character following the tag. Returns `true` if the tag
     /// matched, `false` otherwise. Returns `None` if end of input is reached
     /// and the tag did not match.
-    /// 
+    ///
     /// On `None` and `Some(false)` the input is reset to the state before the
     /// function was called.
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
-    /// 
+    ///
     /// assert_eq!(input.advance_tag("abc"), Some(true));
     /// assert_eq!(input.current(), None);
     /// assert_eq!(input.position().offset(), 3);
-    /// 
+    ///
     /// let mut input = Input::new("ab");
-    /// 
+    ///
     /// assert_eq!(input.advance_tag("abc"), None);
     /// assert_eq!(input.position().offset(), 0);
-    /// 
+    ///
     /// let mut input = Input::new("abdef");
-    /// 
+    ///
     /// assert_eq!(input.advance_tag("abc"), Some(false));
     /// assert_eq!(input.position().offset(), 0);
     /// ```
     pub fn advance_tag(&mut self, tag: &str) -> Option<bool> {
-        let state = *self;
+        if self.input.starts_with(tag) {
+            for _ in tag.chars() {
+                self.advance();
+            }
+            return Some(true);
+        }
 
-        for chr in tag.chars() {
-            if let Some(curr) = self.current() {
-                if curr != chr {
-                    *self = state;
+        if self.input.len() < tag.len() {
+            for (ch_in, ch_tag) in self.input.chars().zip(tag.chars()) {
+                if ch_in != ch_tag {
                     return Some(false);
                 }
-                self.advance();
-            } else {
-                *self = state;
-                return None;
             }
+            return None;
         }
-        Some(true)
+
+        Some(false)
     }
 
     #[cfg(feature = "regex")]
     /// Advances to the character following the regular expression. Returns
     /// `Some(matched)` if the regular expression matched, `None` otherwise.
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// # use regex::Regex;
     /// let mut input = Input::new("abc");
-    /// 
+    ///
     /// assert_eq!(input.advance_match(&Regex::new(r"^\w+").unwrap()), Some("abc"));
     /// assert_eq!(input.current(), None);
     /// assert_eq!(input.position().offset(), 3);
-    /// 
+    ///
     /// let mut input = Input::new("ab");
-    /// 
+    ///
     /// assert_eq!(input.advance_match(&Regex::new(r"^\d+").unwrap()), None);
     /// assert_eq!(input.position().offset(), 0);
     /// ```
@@ -225,11 +239,11 @@ impl<'a> Input<'a> {
     /// Advances to the next character if the predicate returns `true` for the
     /// current character. Returns `true` if progress was made, `false`
     /// otherwise. Returns `None` if end of input is reached.
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc");
-    /// 
+    ///
     /// assert_eq!(input.advance_if(|c| c.is_ascii_alphabetic()), Some(true));
     /// assert_eq!(input.current(), Some('b'));
     /// assert_eq!(input.advance_if(|c| c.is_ascii_digit()), Some(false));
@@ -256,11 +270,11 @@ impl<'a> Input<'a> {
     /// Advances to the next charater as long as the predicate returns `true`
     /// for the current character. Returns the slice that matched. It may be
     /// zero length.
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// let mut input = Input::new("abc\n123");
-    /// 
+    ///
     /// assert_eq!(input.advance_while(|c| c.is_ascii_alphabetic()), "abc");
     /// assert_eq!(input.current(), Some('\n'));
     /// assert_eq!(input.advance_while(|c| c.is_ascii_alphabetic()), "");
@@ -289,14 +303,14 @@ impl<'a> Input<'a> {
     /// for the current character. Returns `None` if end of input is reached or
     /// `Some(matched)` if the predicate returned `true` for the current
     /// character. The matched slice may be zero length.
-    /// 
+    ///
     /// On `None` the input is reset to the state before the function was
     /// called.
-    /// 
+    ///
     /// ```rust
     /// # use kamo::parser::Input;
     /// let mut input = Input::new("123\nabc|");
-    /// 
+    ///
     /// assert_eq!(input.advance_until(|c| c == '\n'), Some("123"));
     /// assert_eq!(input.current(), Some('\n'));
     /// assert_eq!(input.advance_until(|c| c == '\n'), Some(""));
@@ -366,6 +380,12 @@ impl PartialEq for Input<'_> {
 
 impl<'a> From<&'a str> for Input<'a> {
     fn from(input: &'a str) -> Self {
+        Self::new(input)
+    }
+}
+
+impl<'a> From<&'a String> for Input<'a> {
+    fn from(input: &'a String) -> Self {
         Self::new(input)
     }
 }
@@ -520,7 +540,10 @@ mod tests {
         assert_eq!(input.position(), Position::new(0, 1, 1));
         assert!(!input.newline());
 
-        assert_eq!(input.advance_match(&Regex::new(r"^\w+").unwrap()), Some("abc"));
+        assert_eq!(
+            input.advance_match(&Regex::new(r"^\w+").unwrap()),
+            Some("abc")
+        );
         assert_eq!(input.current(), Some('\n'));
         assert_eq!(input.position(), Position::new(3, 1, 4));
         assert!(input.newline());
@@ -535,7 +558,10 @@ mod tests {
         assert_eq!(input.position(), Position::new(4, 2, 1));
         assert!(!input.newline());
 
-        assert_eq!(input.advance_match(&Regex::new(r"^\d+").unwrap()), Some("123"));
+        assert_eq!(
+            input.advance_match(&Regex::new(r"^\d+").unwrap()),
+            Some("123")
+        );
         assert_eq!(input.current(), None);
         assert_eq!(input.position(), Position::new(7, 2, 4));
         assert!(!input.newline());

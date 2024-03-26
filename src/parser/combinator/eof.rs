@@ -7,9 +7,7 @@ use super::CombinatorError;
 /// # Examples
 /// 
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CombinatorError, code, Input, Position
-/// # };
+/// # use kamo::{Position, parser::{prelude::*, CombinatorError, code, Input}};
 /// let mut parser = eof;
 /// 
 /// assert_eq!(parser.parse("".into()), Ok(("", Input::from(""))));

@@ -1,24 +1,62 @@
-use crate::parser::{code, Input, ParseResult, Parser};
+use crate::parser::{code, Input, ParseError, ParseResult, Parser};
 
 use super::SequenceError;
 
-/// Fold zero or more elements into a single value.
+/// Fold zero to `n` elements into a single value.
 ///
 /// When the parser for the element excepts an empty input and no progress is
 /// made, the parser returns an infinte loop error. Sequence parsers must make
 /// progress on every successful iteration.
 ///
-/// The fold function is called with the initial value, the input, and the
-/// element. The `input` parameter is the input before the element is parsed.
-/// The result of the fold function is used as the new initial value
-/// for the next iteration.
+/// The iteration stops when the parser for the element fails or `n` elements
+/// have been parsed. If the parser for the element fails, the parser returns
+/// the current value and the input before the element was parsed. An exception
+/// is made if the error is semantic, then the parser returns the error.
 ///
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
+/// let mut parser = fold_many_n(usize::MAX, tag("let"),
+///     || 0, |acc, _, _| acc + 1);
+///
+/// assert_eq!(parser.parse("letletlet".into()), Ok((3, Input::from(""))));
+/// assert_eq!(parser.parse("letlet".into()), Ok((2, Input::from(""))));
+/// assert_eq!(parser.parse("let".into()), Ok((1, Input::from(""))));
+/// assert_eq!(parser.parse("letabc".into()), Ok((1, Input::from("abc"))));
+/// assert_eq!(parser.parse("abc".into()), Ok((0, Input::from("abc"))));
+/// assert_eq!(parser.parse("".into()), Ok((0, Input::from(""))));
+/// ```
+pub fn fold_many_n<'a, 'b, F1, F2, F3, O1, O2>(
+    n: usize,
+    item: F1,
+    init: F2,
+    fold: F3,
+) -> impl FnMut(Input<'a>) -> ParseResult<'a, O2>
+where
+    O1: 'b,
+    O2: 'b,
+    F1: Parser<'a, 'b, O1>,
+    F2: Fn() -> O2,
+    F3: FnMut(O2, Input<'a>, O1) -> O2,
+{
+    let mut value = counting_fold_many_n(n, item, init, fold);
+
+    move |input| value(input).map(|((_, value), input)| (value, input))
+}
+
+/// Fold zero or more elements into a single value.
+///
+/// Calls [`fold_many_n()`], `n` is set to `usize::MAX`.
+///
+/// # Examples
+///
+/// ```rust
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = fold_many0(tag("let"), || 0, |acc, _, _| acc + 1);
 ///
 /// assert_eq!(parser.parse("letletlet".into()), Ok((3, Input::from(""))));
@@ -28,8 +66,9 @@ use super::SequenceError;
 /// assert_eq!(parser.parse("abc".into()), Ok((0, Input::from("abc"))));
 /// assert_eq!(parser.parse("".into()), Ok((0, Input::from(""))));
 /// ```
+#[inline]
 pub fn fold_many0<'a, 'b, F1, F2, F3, O1, O2>(
-    mut element: F1,
+    element: F1,
     init: F2,
     fold: F3,
 ) -> impl FnMut(Input<'a>) -> ParseResult<'a, O2>
@@ -38,38 +77,21 @@ where
     O2: 'b,
     F1: Parser<'a, 'b, O1>,
     F2: Fn() -> O2,
-    F3: Fn(O2, Input<'a>, O1) -> O2,
+    F3: FnMut(O2, Input<'a>, O1) -> O2,
 {
-    move |input| {
-        let mut acc = init();
-        let mut cursor = input;
-
-        while let Ok((item, next)) = element.parse(cursor) {
-            infinite_loop_check!(cursor, next);
-            acc = fold(acc, cursor, item);
-            cursor = next;
-        }
-        Ok((acc, cursor))
-    }
+    fold_many_n(usize::MAX, element, init, fold)
 }
 
 /// Fold one or more elements into a single value.
 ///
-/// When the parser for the element excepts an empty input and no progress is
-/// made, the parser returns an infinte loop error. Sequence parsers must make
-/// progress on every successful iteration.
-///
-/// The fold function is called with the initial value, the input, and the
-/// element. The `input` parameter is the input before the element is parsed.
-/// The result of the fold function is used as the new initial value
-/// for the next iteration.
+/// Calls [`fold_many_n()`], `n` is set to `usize::MAX`.
 ///
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = fold_many1(tag("let"), || 0, |acc, _, _| acc + 1);
 ///
 /// assert_eq!(parser.parse("letletlet".into()), Ok((3, Input::from(""))));
@@ -83,12 +105,12 @@ where
 /// )));
 /// assert_eq!(parser.parse("".into()), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_MANY_1,
 ///     SequenceError::Many1
 /// )));
 /// ```
 pub fn fold_many1<'a, 'b, F1, F2, F3, O1, O2>(
-    mut element: F1,
+    item: F1,
     init: F2,
     fold: F3,
 ) -> impl FnMut(Input<'a>) -> ParseResult<'a, O2>
@@ -97,37 +119,27 @@ where
     O2: 'b,
     F1: Parser<'a, 'b, O1>,
     F2: Fn() -> O2,
-    F3: Fn(O2, Input<'a>, O1) -> O2,
+    F3: FnMut(O2, Input<'a>, O1) -> O2,
 {
-    move |input| {
-        let (mut acc, mut cursor) = match element.parse(input) {
-            Ok((item, next)) => Ok((fold(init(), input, item), next)),
-            Err(mut err) => {
-                err.push(input, code::ERR_MANY_1, SequenceError::Many1);
-                Err(err)
-            }
-        }?;
+    let mut value = counting_fold_many_n(usize::MAX, item, init, fold);
 
-        infinite_loop_check!(input, cursor);
-        while let Ok((item, next)) = element.parse(cursor) {
-            infinite_loop_check!(cursor, next);
-            acc = fold(acc, cursor, item);
-            cursor = next;
+    move |input| {
+        let ((count, value), cursor) = value.parse(input)?;
+
+        if count == 0 {
+            return Err(ParseError::new_at(
+                cursor,
+                code::ERR_MANY_1,
+                SequenceError::Many1,
+            ));
         }
-        Ok((acc, cursor))
+        Ok((value, cursor))
     }
 }
 
 /// Fold at least `m` and at most `n` elements into a single value.
 ///
-/// When the parser for the element excepts an empty input and no progress is
-/// made, the parser returns an infinte loop error. Sequence parsers must make
-/// progress on every successful iteration.
-///
-/// The fold function is called with the initial value, the input, and the
-/// element. The `input` parameter is the input before the element is parsed.
-/// The result of the fold function is used as the new initial value
-/// for the next iteration.
+/// Calls [`fold_many_n()`].
 ///
 /// # Panics
 ///
@@ -136,9 +148,9 @@ where
 /// # Examples
 ///
 /// ```rust
-/// # use kamo::parser::{
-/// #     prelude::*, CharacterError, SequenceError, code, Input, Position, Span
-/// # };
+/// # use kamo::{Position, parser::{
+/// #     prelude::*, CharacterError, SequenceError, code, Input, Span
+/// # }};
 /// let mut parser = fold_many_m_n(2, 3, tag("let"), || 0, |acc, _, _| acc + 1);
 ///
 /// assert_eq!(parser.parse("letletlet".into()), Ok((3, Input::from(""))));
@@ -147,7 +159,7 @@ where
 ///     Ok((3, Input::from("let"))));
 /// assert_eq!(parser.parse("let".into()), Err(ParseError::new(
 ///     Position::new(3, 1, 4),
-///     code::ERR_EOF,
+///     code::ERR_MANY_M,
 ///     SequenceError::ManyM(2)
 /// )));
 /// assert_eq!(parser.parse("letabc".into()), Err(ParseError::new(
@@ -162,14 +174,14 @@ where
 /// )));
 /// assert_eq!(parser.parse("".into()), Err(ParseError::new(
 ///     Position::new(0, 1, 1),
-///     code::ERR_EOF,
+///     code::ERR_MANY_M,
 ///     SequenceError::ManyM(2)
 /// )));
 /// ```
 pub fn fold_many_m_n<'a, 'b, F1, F2, F3, O1, O2>(
     m: usize,
     n: usize,
-    mut element: F1,
+    item: F1,
     init: F2,
     fold: F3,
 ) -> impl FnMut(Input<'a>) -> ParseResult<'a, O2>
@@ -178,55 +190,68 @@ where
     O2: 'b,
     F1: Parser<'a, 'b, O1>,
     F2: Fn() -> O2,
-    F3: Fn(O2, Input<'a>, O1) -> O2,
+    F3: FnMut(O2, Input<'a>, O1) -> O2 + 'a,
 {
     assert!(m <= n, "m must be less than or equal to n");
 
+    let mut value = counting_fold_many_n(n, item, init, fold);
+
     move |input| {
-        if n - m == 0 && n == 0 {
-            return Ok((init(), input));
+        let ((count, value), cursor) = value.parse(input)?;
+
+        if count < m {
+            return Err(ParseError::new_at(
+                cursor,
+                code::ERR_MANY_M,
+                SequenceError::ManyM(m),
+            ));
         }
+        Ok((value, cursor))
+    }
+}
 
-        // If m is 0, then many are optional
-        let (mut acc, mut cursor) = if m == 0 {
-            if let Ok((item, cursor)) = element.parse(input) {
-                (fold(init(), input, item), cursor)
-            } else {
-                return Ok((init(), input));
-            }
-        } else {
-            let (item, cursor) = element.parse(input).map_err(|mut err| {
-                err.push(input, code::ERR_MANY_M, SequenceError::ManyM(m));
-                err
-            })?;
-            (fold(init(), input, item), cursor)
-        };
+fn counting_fold_many_n<'a, 'b, F1, F2, F3, O1, O2>(
+    n: usize,
+    item: F1,
+    init: F2,
+    fold: F3,
+) -> impl FnMut(Input<'a>) -> ParseResult<'a, (usize, O2)>
+where
+    O1: 'b,
+    O2: 'b,
+    F1: Parser<'a, 'b, O1>,
+    F2: Fn() -> O2,
+    F3: FnMut(O2, Input<'a>, O1) -> O2,
+{
+    let mut item = item;
+    let mut fold = fold;
 
-        infinite_loop_check!(input, cursor);
+    move |input| {
+        let mut acc = init();
+        let mut cursor = input;
 
-        for i in 1..n {
-            match element.parse(cursor) {
+        for m in 0..n {
+            match item.parse(cursor) {
                 Ok((item, next)) => {
                     infinite_loop_check!(cursor, next);
                     acc = fold(acc, cursor, item);
                     cursor = next;
                 }
-                Err(mut err) => {
-                    if i < m {
-                        err.push(cursor, code::ERR_MANY_M, SequenceError::ManyM(m));
+                Err(err) => {
+                    if err.is_semantic() {
                         return Err(err);
                     }
-                    return Ok((acc, cursor));
+                    return Ok(((m, acc), cursor));
                 }
             }
         }
-        Ok((acc, cursor))
+        Ok(((n, acc), cursor))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::parser::{prelude::*, Position};
+    use crate::{parser::prelude::*, Position};
 
     use super::*;
 
@@ -309,13 +334,17 @@ mod tests {
                 SequenceError::Many1
             ))
         );
+
+        let error = parser.parse("".into()).expect_err("invalid output");
+
+        assert!(error.is_eof());
         assert_eq!(
-            parser.parse("".into()),
-            Err(ParseError::new(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
                 Position::new(0, 1, 1),
-                code::ERR_EOF,
+                code::ERR_MANY_1,
                 SequenceError::Many1
-            ))
+            )
         );
     }
 
@@ -358,14 +387,18 @@ mod tests {
     fn fold_many_m_n_failure() {
         let mut parser = fold_many_m_n(2, 3, tag("let"), || 0, |acc, _, _| acc + 1);
 
+        let error = parser.parse("let".into()).expect_err("invalid output");
+
+        assert!(error.is_eof());
         assert_eq!(
-            parser.parse("let".into()),
-            Err(ParseError::new(
+            error,
+            ParseError::eof(Position::new(3, 1, 4)).and(
                 Position::new(3, 1, 4),
-                code::ERR_EOF,
+                code::ERR_MANY_M,
                 SequenceError::ManyM(2)
-            ))
+            )
         );
+
         assert_eq!(
             parser.parse("letabc".into()),
             Err(ParseError::new(
@@ -382,13 +415,17 @@ mod tests {
                 SequenceError::ManyM(2)
             ))
         );
+
+        let error = parser.parse("".into()).expect_err("invalid output");
+
+        assert!(error.is_eof());
         assert_eq!(
-            parser.parse("".into()),
-            Err(ParseError::new(
+            error,
+            ParseError::eof(Position::new(0, 1, 1)).and(
                 Position::new(0, 1, 1),
-                code::ERR_EOF,
+                code::ERR_MANY_M,
                 SequenceError::ManyM(2)
-            ))
+            )
         );
     }
 }

@@ -1,6 +1,8 @@
 use std::fmt;
 
-use super::{Input, Position};
+use crate::Position;
+
+use super::Input;
 
 /// A span is a range of positions in the input.
 ///
@@ -28,7 +30,7 @@ impl Span {
     /// # Examples
     ///
     /// ```rust
-    /// # use kamo::parser::{Position, Span};
+    /// # use kamo::{Position, parser::Span};
     /// let start = Position::new(0, 1, 1);
     /// let end = Position::new(3, 1, 4);
     /// let span = Span::new(start, end);
@@ -48,7 +50,7 @@ impl Span {
     /// # Examples
     ///
     /// ```rust
-    /// # use kamo::parser::{Position, Span};
+    /// # use kamo::{Position, parser::Span};
     /// let pos = Position::new(0, 1, 1);
     /// let span = Span::new_at(pos);
     ///
@@ -102,7 +104,7 @@ impl Span {
     /// # Examples
     ///
     /// ```rust
-    /// # use kamo::parser::{Position, Span};
+    /// # use kamo::{Position, parser::Span};
     /// let pos = Position::new(0, 1, 1);
     /// let span = Span::new_at(pos);
     ///
@@ -132,7 +134,7 @@ impl Span {
     /// # Examples
     ///
     /// ```rust
-    /// # use kamo::parser::{Position, Span};
+    /// # use kamo::{Position, parser::Span};
     /// let start = Position::new(0, 1, 1);
     /// let end = Position::new(2, 1, 3);
     /// let span = Span::new(start, end);

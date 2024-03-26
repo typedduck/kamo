@@ -55,6 +55,8 @@ pub const ERR_NUMERIC: Code = 0x0000_0213;
 pub const ERR_LOWERCASE: Code = 0x0000_0214;
 pub const ERR_UPPERCASE: Code = 0x0000_0215;
 pub const ERR_IDENT_START: Code = 0x0000_0216;
+pub const ERR_ANY_CHAR: Code = 0x0000_0217;
+pub const ERR_IS_NOT: Code = 0x0000_0218;
 #[cfg(feature = "regex")]
 pub const ERR_REGEX: Code = 0x0000_0217;
 /// Characters errors end at `0x0000_02ff`.

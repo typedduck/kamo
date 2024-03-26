@@ -11,8 +11,9 @@
 /// ```rust
 /// # use kamo::{
 /// #     infinite_loop_check,
+/// #     Position,
 /// #     parser::{
-/// #         prelude::*, SequenceError, code, Input, Position, Span
+/// #         prelude::*, SequenceError, code, Input, Span
 /// #    }
 /// # };
 /// fn parser<'a>(input: Input<'a>) -> ParseResult<'a, usize> {

@@ -69,7 +69,7 @@ impl Radix {
                 }
                 return Err(ParseError::new(input, code, error.to_string()));
             }
-            Err(ParseError::eof_with(input, error.to_string()))
+            Err(ParseError::eof(input).and(input, code, error.to_string()))
         }
     }
 }
