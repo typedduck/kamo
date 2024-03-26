@@ -144,6 +144,8 @@ pub use vector::Vector;
 mod visitor;
 pub use visitor::Visitor;
 
+use crate::Position;
+
 /// A type alias for [`SmartString<LazyCompact>`].
 ///
 /// Smart strings are used to store strings in the value type. This is to reduce
