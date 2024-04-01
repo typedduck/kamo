@@ -49,6 +49,10 @@ pub enum SexprError<'a> {
     InterToken,
     /// Expecting a closing parenthesis of list.
     ListClosing,
+    /// Expecting a datum after a dot in a list.
+    ListDotted,
+    /// A dotted datum must be preceded by a list of one or more datums.
+    ListDottedPreceded,
     /// Expecting a list.
     ListLiteral,
     /// Expecting a number.
@@ -116,6 +120,9 @@ impl<'a> fmt::Display for SexprError<'a> {
                 "literal could not be converted to an integer, value is out of range"),
             Self::InterToken => write!(f, "expecting intertoken whitespace or comment"),
             Self::ListClosing => write!(f, "expecting a closing parenthesis of list"),
+            Self::ListDotted => write!(f, "expecting a datum after a dot in a list"),
+            Self::ListDottedPreceded => write!(f,
+                "a dotted datum must be preceded by a list of one or more datums"),
             Self::ListLiteral => write!(f, "expecting a list: (<datum>*) | (<datum>+ . <datum>)"),
             Self::NumberLiteral => write!(f, "expecting a number"),
             Self::OctalLiteral => write!(f, "expecting an octal integer"),
@@ -193,13 +200,15 @@ pub mod code {
     pub const ERR_VECTOR_LITERAL: Code = ERR_CUSTOM + 0x001f;
     // List errors
     pub const ERR_LIST_CLOSING: Code = ERR_CUSTOM + 0x0020;
-    pub const ERR_LIST_LITERAL: Code = ERR_CUSTOM + 0x0021;
+    pub const ERR_LIST_DOTTED: Code = ERR_CUSTOM + 0x0021;
+    pub const ERR_LIST_DOTTED_PRECEDED: Code = ERR_CUSTOM + 0x0022;
+    pub const ERR_LIST_LITERAL: Code = ERR_CUSTOM + 0x0023;
     // File error
-    pub const ERR_FILE: Code = ERR_CUSTOM + 0x0022;
+    pub const ERR_FILE: Code = ERR_CUSTOM + 0x0024;
     // Datum errors
-    pub const ERR_DATUM: Code = ERR_CUSTOM + 0x0023;
-    pub const ERR_DATUM_HASHTAG: Code = ERR_CUSTOM + 0x0024;
-    pub const ERR_DATUM_UNQUOTE: Code = ERR_CUSTOM + 0x0025;
-    /// S-expression errors end at `ERR_CUSTOM + 0x0026`.
-    pub const ERR_SEXPR_END: Code = ERR_CUSTOM + 0x0026;
+    pub const ERR_DATUM: Code = ERR_CUSTOM + 0x0025;
+    pub const ERR_DATUM_HASHTAG: Code = ERR_CUSTOM + 0x0026;
+    pub const ERR_DATUM_UNQUOTE: Code = ERR_CUSTOM + 0x0027;
+    /// S-expression errors end at `ERR_CUSTOM + 0x0028`.
+    pub const ERR_SEXPR_END: Code = ERR_CUSTOM + 0x0028;
 }
