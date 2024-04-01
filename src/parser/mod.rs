@@ -298,7 +298,7 @@ pub mod prelude {
             take_while1, take_while_m_n, unicode,
         },
         combinator::{eof, map, map2, opt, recognize, value, verify},
-        error::{context, context_and, context_as, semantic},
+        error::{context, context_and, context_as, cut, map_err, semantic},
         literal,
         sequence::{
             delimited, fold_list0, fold_list1, fold_list_m_n, fold_list_n, fold_many0, fold_many1,

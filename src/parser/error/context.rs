@@ -120,26 +120,127 @@ where
     }
 }
 
-/// Marks the error of the parser as semantic
+/// Marks the error of the parser as semantic error if it fails to meet the
+/// semantic requirements defined by the closure.
+///
+/// The closure is called with the span of the whole input parsed and the output
+/// of the parser. If the closure returns `Some`, the error returned is marked
+/// as a semantic error. Otherwise, the error of the parser is returned as is.
 /// 
 /// # Examples
-/// 
+///
 /// ```rust
-/// # use kamo::{Position, parser::{prelude::*, code, Input}};
-/// let mut parser = semantic(tag("hello"));
-/// let result = parser.parse(Input::from("world"));
-/// 
-/// assert_eq!(result, Err(ParseError::new(
-///     Position::new(0, 1, 1),
-///     code::ERR_TAG,
-///     "Expected `hello`"
+/// # use kamo::{Position, parser::{prelude::*, code, Input, Span}};
+/// let mut parser = literal::integer(literal::Radix::Decimal, true);
+/// let mut parser = semantic(parser, |span, output| {
+///     if *output < 0 {
+///         Some(ParseError::new(
+///             span,
+///             code::ERR_INTEGER,
+///             "Expected a positive integer",
+///         ))
+///     } else {
+///         None
+///     }
+/// });
+///
+/// assert_eq!(parser.parse("123".into()), Ok((123, Input::from(""))));
+/// assert_eq!(parser.parse("-123".into()), Err(ParseError::new(
+///     Span::new(Position::new(0, 1, 1), Position::new(4, 1, 5)),
+///     code::ERR_INTEGER,
+///     "Expected a positive integer",
 /// )));
-/// assert!(result.unwrap_err().is_semantic());
+pub fn semantic<'a, 'b, O, F, G>(mut f: F, g: G) -> impl FnMut(Input<'a>) -> ParseResult<'a, O>
+where
+    O: 'b,
+    F: Parser<'a, 'b, O> + 'b,
+    G: Fn(Span, &O) -> Option<ParseError>,
+{
+    move |input| {
+        let result = f.parse(input);
+        match result {
+            Ok((output, cursor)) => {
+                if let Some(err) = g(Span::new(input, cursor), &output) {
+                    Err(err.and_semantic())
+                } else {
+                    Ok((output, cursor))
+                }
+            }
+            Err(err) => Err(err),
+        }
+    }
+}
+
+/// Marks the error of the parser as failure
+///
+/// An error marked as failure. A failure error prevents alternative parsers
+/// from being tried. Optional parsers will return an error, too.
+///
+/// # Examples
+///
+/// ```rust
+/// # use kamo::{Position, parser::{prelude::*, code, CharacterError, Input, Span}};
+/// let mut parser = any((
+///    preceded(tag("pre1"), cut(tag("tag1"))),
+///    preceded(tag("pre2"), cut(tag("tag2"))),
+/// ));
+///
+/// let result = parser.parse(Input::from("pre1tag1"));
+/// assert_eq!(result, Ok(("tag1", Input::from(""))));
+///
+/// let result = parser.parse(Input::from("pre2tag2"));
+/// assert_eq!(result, Ok(("tag2", Input::from(""))));
+///
+/// let result = parser.parse(Input::from("pre1tag2"));
+/// assert_eq!(result, Err(ParseError::new(
+///     Span::new(Position::new(4, 1, 5), Position::new(7, 1, 8)),
+///     code::ERR_TAG,
+///     CharacterError::Tag("tag1"),
+/// )));
+///
+/// let result = parser.parse(Input::from("pre2tag1"));
+/// assert_eq!(result, Err(ParseError::new(
+///     Span::new(Position::new(4, 1, 5), Position::new(7, 1, 8)),
+///     code::ERR_TAG,
+///     CharacterError::Tag("tag2"),
+/// )));
 /// ```
-pub fn semantic<'a, 'b, O, F>(mut f: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, O>
+pub fn cut<'a, 'b, O, F>(mut f: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, O>
 where
     O: 'b,
     F: Parser<'a, 'b, O> + 'b,
 {
-    move |input| f.parse(input).map_err(|err| err.and_semantic())
+    move |input| f.parse(input).map_err(|err| err.and_failure())
+}
+
+/// Maps the error of the parser with a closure.
+/// 
+/// # Examples
+/// 
+/// ```rust
+/// # use kamo::{Position, parser::{prelude::*, code, Input, Span}};
+/// let mut parser = map_err(tag("hello"), |err| {
+///     ParseError::new(
+///         Span::new(Position::new(0, 1, 1), Position::new(5, 1, 6)),
+///         code::ERR_CONTEXT,
+///         "Expected `hello`",
+///     )
+/// });
+/// 
+/// assert_eq!(parser.parse("world".into()), Err(ParseError::new(
+///     Span::new(Position::new(0, 1, 1), Position::new(5, 1, 6)),
+///     code::ERR_CONTEXT,
+///     "Expected `hello`"
+/// )));
+/// ```
+pub fn map_err<'a, 'b, O, F, G>(mut f: F, g: G) -> impl FnMut(Input<'a>) -> ParseResult<'a, O>
+where
+    O: 'b,
+    F: Parser<'a, 'b, O> + 'b,
+    G: Fn(ParseError) -> ParseError,
+{
+    move |input| match f.parse(input) {
+        Ok((output, cursor)) => Ok((output, cursor)),
+        Err(err) => Err(g(err)),
+    }
 }
