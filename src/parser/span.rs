@@ -39,7 +39,10 @@ impl Span {
     /// assert_eq!(span.end(), end);
     /// ```
     #[inline]
-    pub fn new(start: Position, end: Position) -> Self {
+    pub fn new(start: impl Into<Position>, end: impl Into<Position>) -> Self {
+        let start = start.into();
+        let end = end.into();
+        
         assert!(start <= end, "start > end");
         Self { start, end }
     }
@@ -58,7 +61,9 @@ impl Span {
     /// assert_eq!(span.end(), pos);
     /// ```
     #[inline]
-    pub const fn new_at(pos: Position) -> Self {
+    pub fn new_at(pos: impl Into<Position>) -> Self {
+        let pos = pos.into();
+
         Self {
             start: pos,
             end: pos,
