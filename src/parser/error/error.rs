@@ -1,6 +1,9 @@
 use std::{error::Error as StdError, fmt};
 
-use crate::{parser::{Input, Span}, Position};
+use crate::{
+    parser::{Input, Span},
+    Position,
+};
 
 use super::{
     cause::Cause,
@@ -23,12 +26,15 @@ const UNEXPECTED_END_OF_FILE: &str = "unexpected end of file";
 /// error stack can be chained with a [`Cause`] which indicates an unexpected
 /// end of file and a [`Cause`] which indicates that the expected item is
 /// missing.
-/// 
+///
 /// An error can be set to be semantic. A semantic error should be used when the
 /// error is not caused by the input but by the semantic of the input. A
 /// semantic error implies that the input was read correctly until to the end.
 /// For example, a number may be syntactically correct but it may be out of
 /// range.
+/// 
+/// An error can be set to be a failure. A failure error prevents alternative
+/// parsers from being tried. Optional parsers will return an error, too.
 pub struct ParseError {
     /// Index of the latest Cause in the error stack which indicates an
     /// unexpected end of file.
@@ -38,6 +44,7 @@ pub struct ParseError {
     /// The optional source of the error.
     source: Option<Box<dyn StdError + 'static>>,
     semantic: bool,
+    failure: bool,
 }
 
 impl ParseError {
@@ -55,6 +62,7 @@ impl ParseError {
             stack: vec![Cause::new(span, code, message)],
             source: None,
             semantic: false,
+            failure: false,
         }
     }
 
@@ -92,7 +100,7 @@ impl ParseError {
     }
 
     /// Sets the error to be semantic and chaining it.
-    /// 
+    ///
     /// A semantic error should be used when the error is not caused by the
     /// input but by the semantic of the input. A semantic error implies that
     /// the input was read correctly until to the end. For example, a number may
@@ -100,6 +108,16 @@ impl ParseError {
     pub fn and_semantic(self) -> Self {
         let mut this = self;
         this.set_semantic();
+        this
+    }
+
+    /// Sets the error to be a failure and chaining it.
+    /// 
+    /// A failure error prevents alternative parsers from being tried. Optional
+    /// parsers will return an error, too.
+    pub fn and_failure(self) -> Self {
+        let mut this = self;
+        this.failure = true;
         this
     }
 
@@ -169,7 +187,7 @@ impl ParseError {
     }
 
     /// Returns `true` if the error is semantic.
-    /// 
+    ///
     /// A semantic error should be set when the error is not caused by the
     /// input but by the semantic of the input. A semantic error implies that
     /// the input was read correctly until to the end. For example, a number may
@@ -180,7 +198,7 @@ impl ParseError {
     }
 
     /// Sets the error to be semantic.
-    /// 
+    ///
     /// A semantic error should be set when the error is not caused by the
     /// input but by the semantic of the input. A semantic error implies that
     /// the input was read correctly until to the end. For example, a number may
@@ -188,6 +206,21 @@ impl ParseError {
     #[inline]
     pub fn set_semantic(&mut self) {
         self.semantic = true;
+    }
+
+    /// Returns `true` if the error is a failure.
+    #[inline]
+    pub const fn is_failure(&self) -> bool {
+        self.failure
+    }
+
+    /// Sets the error to be a failure.
+    ///
+    /// A failure error prevents alternative parsers from being tried. Optional
+    /// parsers will return an error, too.
+    #[inline]
+    pub fn set_failure(&mut self) {
+        self.failure = true;
     }
 
     /// Sets the source of the error to the given `source`. Returned by
@@ -256,5 +289,97 @@ impl fmt::Debug for ParseError {
             }
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::parser::Input;
+
+    #[test]
+    fn parse_err_size() {
+        assert_eq!(std::mem::size_of::<ParseError>(), 48);
+    }
+
+    #[test]
+    fn parse_error_new() {
+        let pos = Position::new(1, 1, 2);
+        let error = ParseError::new(pos, ERR_EOF, "unexpected end of file");
+
+        assert_eq!(error.cause().span(), pos.into());
+        assert_eq!(error.cause().code(), ERR_EOF);
+        assert_eq!(error.cause().message(), "unexpected end of file");
+        assert!(error.is_eof());
+        assert!(!error.is_semantic());
+        assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn parse_error_new_at() {
+        let input = Input::new("test");
+        let error = ParseError::new_at(input, ERR_EOF, "unexpected end of file");
+
+        assert_eq!(error.cause().span(), input.into());
+        assert_eq!(error.cause().code(), ERR_EOF);
+        assert_eq!(error.cause().message(), "unexpected end of file");
+        assert!(error.is_eof());
+        assert!(!error.is_semantic());
+        assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn parse_error_eof() {
+        let pos = Position::new(1, 1, 2);
+        let error = ParseError::eof(pos);
+
+        assert_eq!(error.cause().span(), pos.into());
+        assert_eq!(error.cause().code(), ERR_EOF);
+        assert_eq!(error.cause().message(), "unexpected end of file");
+        assert!(error.is_eof());
+        assert!(!error.is_semantic());
+        assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn parse_error_and() {
+        let pos = Position::new(1, 1, 2);
+        let mut error = ParseError::new(pos, ERR_EOF, "unexpected end of file");
+
+        error.push(pos, ERR_EOF, "unexpected end of file");
+
+        assert_eq!(error.cause().span(), pos.into());
+        assert_eq!(error.cause().code(), ERR_EOF);
+        assert_eq!(error.cause().message(), "unexpected end of file");
+        assert!(error.is_eof());
+        assert!(!error.is_semantic());
+        assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn parse_error_and_semantic() {
+        let pos = Position::new(1, 1, 2);
+        let error = ParseError::new(pos, ERR_EOF, "unexpected end of file").and_semantic();
+
+        assert_eq!(error.cause().span(), pos.into());
+        assert_eq!(error.cause().code(), ERR_EOF);
+        assert_eq!(error.cause().message(), "unexpected end of file");
+        assert!(error.is_eof());
+        assert!(error.is_semantic());
+        assert!(error.source().is_none());
+    }
+
+    #[test]
+    fn parse_error_and_source() {
+        let pos = Position::new(1, 1, 2);
+        let error = ParseError::new(pos, ERR_EOF, "unexpected end of file")
+            .and_source(std::io::Error::new(std::io::ErrorKind::Other, "test"));
+
+        assert_eq!(error.cause().span(), pos.into());
+        assert_eq!(error.cause().code(), ERR_EOF);
+        assert_eq!(error.cause().message(), "unexpected end of file");
+        assert!(error.is_eof());
+        assert!(!error.is_semantic());
+        assert!(error.source().is_some());
     }
 }
