@@ -41,7 +41,7 @@ macro_rules! any_branch {
                 return Ok(out);
             }
             Err(err) => {
-                if err.is_semantic() {
+                if err.is_semantic() || err.is_failure() {
                     return Err(err);
                 }
                 err.is_eof()
@@ -110,8 +110,8 @@ any_impl!(0: F1; 1: F2; 2: F3; 3: F4; 4: F5; 5: F6; 6: F7; 7: F8; 8: F9;
 /// If one of the parsers hits the end of the input, and end of file cause is
 /// appended to the error.
 ///
-/// If a parser fails with a semantic error, the error of that element is
-/// returned.
+/// If a parser fails with a semantic error or a failure, the error of that
+/// element is returned.
 ///
 /// The output-type of all parsers must be the same.
 ///

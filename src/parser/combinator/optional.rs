@@ -1,6 +1,10 @@
 use crate::parser::{Input, ParseResult, Parser};
 
 /// Makes a parser optional.
+/// 
+/// If the parser succeeds, the output is wrapped in `Some`. If the parser fails
+/// with a semantic or failure error, the error is returned. Otherwise, the
+/// output is `None`.
 ///
 /// # Examples
 ///
@@ -19,7 +23,13 @@ where
 {
     move |input| match f.parse(input) {
         Ok((value, input)) => Ok((Some(value), input)),
-        Err(_) => Ok((None, input)),
+        Err(err) => {
+            if err.is_semantic() || err.is_failure() {
+                Err(err)
+            } else {
+                Ok((None, input))
+            }
+        }
     }
 }
 
