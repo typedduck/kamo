@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.7.0](https://github.com/typedduck/kamo/tree/v0.7.0) - 2024-04-02
+
+* FIX: Proper tracking of positions when parsing lists with position map.
+* Added failure-error to the combination parser library. This allows to
+  propagate errors in the parser combinators. Parsers using the `failure`
+  flag are `any` and `opt`.
+* New parsers `cut` and `map_err`.
+* Span now supports generic parameters to `Span::new` and `Span::new_at`.
+
 ## [0.6.0](https://github.com/typedduck/kamo/tree/v0.6.0) - 2024-03-26
 
 * FIX: Checking equality of floating-point values when they are NaN.
