@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.8.0](https://github.com/typedduck/kamo/tree/v0.8.0) - 2024-04-11
+
+* Refactor after activating pedantic linting. Must changes are in the
+  documentation and adding `#[must_use]`.
+
 ## [0.7.0](https://github.com/typedduck/kamo/tree/v0.7.0) - 2024-04-02
 
 * FIX: Proper tracking of positions when parsing lists with position map.
