@@ -11,6 +11,12 @@ use super::{
 impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// Parses a character literal.
     ///
+    /// # Errors
+    ///
+    /// Fails if the input is not a character literal. Returns a [`ParseError`]
+    /// with code [`ERR_CHARACTER_LITERAL`] and the error variant
+    /// [`SexprError::CharacterLiteral`].
+    ///
     /// # Grammar
     ///
     /// ```text
@@ -25,7 +31,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     pub fn character(input: Input<'b>) -> ParseResult<'b, Value<'a>> {
         let mut cursor = input;
 
-        if let Some(true) = cursor.advance_tag("#\\x") {
+        if cursor.advance_tag("#\\x") == Some(true) {
             return Self::character_code(cursor).map(|(c, cursor)| (Value::new_char(c), cursor));
         }
         match cursor.advance_tag("#\\") {
@@ -78,16 +84,17 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
             })?;
         let code = u32::from_str_radix(code, 16).unwrap();
 
-        if let Some(code) = std::char::from_u32(code) {
-            Ok((code, cursor))
-        } else {
-            Err(ParseError::new(
-                Span::new(input.position(), cursor.position()),
-                ERR_CHARACTER_CODE_POINT + ECO,
-                SexprError::CharacterCodePoint,
-            )
-            .and_semantic())
-        }
+        char::from_u32(code).map_or_else(
+            || {
+                Err(ParseError::new(
+                    Span::new(input.position(), cursor.position()),
+                    ERR_CHARACTER_CODE_POINT + ECO,
+                    SexprError::CharacterCodePoint,
+                )
+                .and_semantic())
+            },
+            |code| Ok((code, cursor)),
+        )
     }
 }
 

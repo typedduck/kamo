@@ -1,15 +1,13 @@
 use std::{fmt, hash};
 
-#[cfg(feature = "evaluate")]
-use crate::eval;
 use crate::parser;
 
 /// A position in the input. It is used to track the position of the parser in
 /// the input.
-/// 
+///
 /// The position is represented by an offset in bytes relative to the begining
 /// of the input, a line number and a column number.
-/// 
+///
 /// Lines and columns start with 1 and are clamped to `[1..=u16::MAX]` to avoid
 /// overflow. The offset is not checked and it is assumed that the offset is
 /// always valid and corresponds to the line and column numbers. The offset is
@@ -27,23 +25,28 @@ impl Position {
     /// no check for the `offset` value. It is assumed that the `offset` is
     /// always valid and corresponds to the `line` and `column` values. The
     /// `offset` is used to compare positions and may not exceed `u32::MAX`.
-    /// 
+    /// The `offset` is cast to `u32` and clamped to `u32::MAX`.
+    ///
     /// # Examples
-    /// 
+    ///
     /// ```rust
     /// # use kamo::Position;
     /// let pos = Position::new(0, 1, 1);
-    /// 
+    ///
     /// assert_eq!(pos.offset(), 0);
     /// assert_eq!(pos.line(), 1);
     /// assert_eq!(pos.column(), 1);
     /// ```
+    #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
     pub fn new(offset: usize, line: usize, column: usize) -> Self {
         let line = line.clamp(1, u16::MAX as usize);
         let column = column.clamp(1, u16::MAX as usize);
+        let offset = u32::try_from(offset).map_or(u32::MAX, |offset| offset);
 
+        // Cast is safe because the values are clamped to u16::MAX.
         Self {
-            offset: offset as u32,
+            offset,
             line: line as u16,
             column: column as u16,
         }
@@ -51,7 +54,8 @@ impl Position {
 
     /// Creates a new position by rebasing the current position to the given
     /// `base` position.
-    pub fn rebase(&self, base: Position) -> Self {
+    #[must_use]
+    pub const fn rebase(&self, base: Self) -> Self {
         let offset = base.offset + self.offset;
         let line = base.line + self.line - 1;
         let column = if self.line == 1 {
@@ -68,18 +72,21 @@ impl Position {
     }
 
     /// Return the offset in bytes relative to the input.
+    #[must_use]
     #[inline]
     pub const fn offset(&self) -> usize {
         self.offset as usize
     }
 
     /// Retrun the line number starting with 1.
+    #[must_use]
     #[inline]
     pub const fn line(&self) -> usize {
         self.line as usize
     }
 
     /// Return the character (utf-8) column starting with 1.
+    #[must_use]
     #[inline]
     pub const fn column(&self) -> usize {
         self.column as usize
@@ -162,38 +169,6 @@ impl From<&&mut parser::Input<'_>> for Position {
     }
 }
 
-#[cfg(feature = "evaluate")]
-impl From<eval::Input<'_>> for Position {
-    #[inline]
-    fn from(input: eval::Input<'_>) -> Self {
-        input.position()
-    }
-}
-
-#[cfg(feature = "evaluate")]
-impl From<&eval::Input<'_>> for Position {
-    #[inline]
-    fn from(input: &eval::Input<'_>) -> Self {
-        input.position()
-    }
-}
-
-#[cfg(feature = "evaluate")]
-impl From<&mut eval::Input<'_>> for Position {
-    #[inline]
-    fn from(input: &mut eval::Input<'_>) -> Self {
-        input.position()
-    }
-}
-
-#[cfg(feature = "evaluate")]
-impl From<&&mut eval::Input<'_>> for Position {
-    #[inline]
-    fn from(input: &&mut eval::Input<'_>) -> Self {
-        input.position()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,7 +214,7 @@ mod tests {
     fn position_display() {
         let pos = Position::new(0, 1, 1);
 
-        assert_eq!(format!("{}", pos), "1:1");
-        assert_eq!(format!("{:#}", pos), "0:1:1");
+        assert_eq!(format!("{pos}"), "1:1");
+        assert_eq!(format!("{pos:#}"), "0:1:1");
     }
 }

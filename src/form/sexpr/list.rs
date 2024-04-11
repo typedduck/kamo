@@ -20,30 +20,31 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// ```
     pub fn list(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> + '_ {
         move |input| {
-            if let Some(pmap) = self.pmap.as_ref() {
-                self.tracked_list(input, &mut pmap.borrow_mut())
-            } else {
-                self.untracked_list(input)
-            }
-            .map_err(|mut err| {
-                let span = err.span();
+            self.pmap
+                .as_ref()
+                .map_or_else(
+                    || self.untracked_list(input),
+                    |pmap| self.tracked_list(input, &mut pmap.borrow_mut()),
+                )
+                .map_err(|mut err| {
+                    let span = err.span();
 
-                match err.code() {
-                    code::ERR_PRECEDED => {
-                        err.push(span, ERR_LIST_LITERAL + ECO, SexprError::ListLiteral)
+                    match err.code() {
+                        code::ERR_PRECEDED => {
+                            err.push(span, ERR_LIST_LITERAL + ECO, SexprError::ListLiteral);
+                        }
+                        code::ERR_TERMINATED => {
+                            err.push(span, ERR_LIST_CLOSING + ECO, SexprError::ListClosing);
+                        }
+                        _ => (),
                     }
-                    code::ERR_TERMINATED => {
-                        err.push(span, ERR_LIST_CLOSING + ECO, SexprError::ListClosing)
-                    }
-                    _ => (),
-                }
-                err
-            })
+                    err
+                })
         }
     }
 
     fn untracked_list(&self, input: Input<'b>) -> ParseResult<'b, Value<'a>> {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         let items = many1(terminated(self.datum(), Self::intertoken));
         let dotted = preceded(terminated(char('.'), Self::intertoken), cut(self.datum()));
@@ -57,11 +58,10 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
         let items = delimited(terminated(tag("("), Self::intertoken), items, tag(")"))(input)?;
 
         match items {
-            ((Some(items), Some(dotted)), cursor) => Ok((
-                Value::new_dotlist(m.to_owned(), items, Some(dotted)),
-                cursor,
-            )),
-            ((Some(items), None), cursor) => Ok((Value::new_list(m.to_owned(), items), cursor)),
+            ((Some(items), Some(dotted)), cursor) => {
+                Ok((Value::new_dotlist(m, items, Some(dotted)), cursor))
+            }
+            ((Some(items), None), cursor) => Ok((Value::new_list(m, items), cursor)),
             ((None, Some(_)), _) => Err(ParseError::new(
                 input,
                 ERR_LIST_DOTTED_PRECEDED + ECO,
@@ -72,7 +72,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     }
 
     fn tracked_list(&self, input: Input<'b>, pmap: &mut PositionMap) -> ParseResult<'b, Value<'a>> {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         let item = map2(self.datum(), |item, input| (item, input.position()));
         let items = many1(terminated(item, Self::intertoken));
@@ -89,29 +89,29 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
         match items {
             ((Some(items), Some(dotted)), cursor) => {
                 let mut m = m.borrow_mut();
-                let head = m.new_pair(items[0].0.to_owned(), Value::new_nil());
-                let mut tail = head.to_owned();
+                let head = m.new_pair(items[0].0.clone(), Value::new_nil());
+                let mut tail = head.clone();
 
                 pmap.insert(head.id(), items[0].1);
                 for (item, pos) in items.into_iter().skip(1) {
                     let pair = m.new_pair(item, Value::new_nil());
                     pmap.insert(pair.id(), pos);
-                    tail.set_cdr(pair.to_owned().into());
+                    tail.set_cdr(pair.clone().into());
                     tail = pair;
                 }
-                tail.set_cdr(dotted.to_owned());
+                tail.set_cdr(dotted.clone());
                 Ok((head.into(), cursor))
             }
             ((Some(items), None), cursor) => {
                 let mut m = m.borrow_mut();
-                let head = m.new_pair(items[0].0.to_owned(), Value::new_nil());
-                let mut tail = head.to_owned();
+                let head = m.new_pair(items[0].0.clone(), Value::new_nil());
+                let mut tail = head.clone();
 
                 pmap.insert(head.id(), items[0].1);
                 for (item, pos) in items.into_iter().skip(1) {
                     let pair = m.new_pair(item, Value::new_nil());
                     pmap.insert(pair.id(), pos);
-                    tail.set_cdr(pair.to_owned().into());
+                    tail.set_cdr(pair.clone().into());
                     tail = pair;
                 }
                 Ok((head.into(), cursor))
@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn list_untracked_success() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned());
+        let sexpr = Sexpr::<0>::new(m.clone());
         let parse = |input| sexpr.list()(Input::new(input));
 
         assert_eq!(
@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn list_tracked_success() {
         let m = Mutator::new_ref();
-        let mut sexpr = Sexpr::<0>::new(m.to_owned()).tracked();
+        let mut sexpr = Sexpr::<0>::new(m.clone()).tracked();
 
         let list = sexpr.list()("(1 2 3)".into());
         assert_eq!(list, Ok((sexpr!(m, "(1 2 3)"), Input::from(""))),);
@@ -196,6 +196,7 @@ mod tests {
         check_positions(list.unwrap().0, sexpr.take_positions().unwrap(), &[]);
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn check_positions(list: Value, pmap: PositionMap, positions: &[Position]) {
         assert_eq!(pmap.len(), positions.len());
         if let Some(pair) = list.as_pair_ptr() {
@@ -208,7 +209,7 @@ mod tests {
     #[test]
     fn list_untracked_failure() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned());
+        let sexpr = Sexpr::<0>::new(m.clone());
         let parse = |input| sexpr.list()(Input::new(input));
 
         list_failure(parse);
@@ -217,7 +218,7 @@ mod tests {
     #[test]
     fn list_tracked_failure() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned()).tracked();
+        let sexpr = Sexpr::<0>::new(m.clone()).tracked();
         let parse = |input| sexpr.list()(Input::new(input));
 
         list_failure(parse);

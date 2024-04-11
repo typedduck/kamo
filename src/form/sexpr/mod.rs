@@ -2,7 +2,7 @@
 //!
 //! The syntax the parser processes is as defined by the Scheme standard R7RS
 //! for the `read` procedure. The syntactic definition is the `<datum>` in
-//! section ["7.1.2 External representations"](https://standards.scheme.org/official/r7rs.pdf)
+//! section [`7.1.2 External representations`](https://standards.scheme.org/official/r7rs.pdf)
 //! of the standard.
 //!  
 //! The syntax deviations from the standard are:
@@ -167,18 +167,21 @@ impl<'a, const ECO: Code> Sexpr<'a, ECO> {
     /// are used to annotate the values of list nodes with their source code
     /// positions. For every pair the position of the car-value is added to the
     /// position map.
-    pub fn new(m: MutatorRef<'a>) -> Self {
+    #[must_use]
+    pub const fn new(m: MutatorRef<'a>) -> Self {
         Self { m, pmap: None }
     }
 
     /// Chains an existing [`PositionMap`] to the parser. The parser takes the
     /// ownership of the position map.
+    #[must_use]
     pub fn with_pmap(mut self, pos: PositionMap) -> Self {
         self.pmap = Some(RefCell::new(pos));
         self
     }
 
     /// Chains an empty [`PositionMap`] to the parser.
+    #[must_use]
     pub fn tracked(mut self) -> Self {
         self.pmap = Some(RefCell::new(PositionMap::new()));
         self
@@ -186,11 +189,16 @@ impl<'a, const ECO: Code> Sexpr<'a, ECO> {
 
     /// Takes the [`PositionMap`] if it is present.
     pub fn take_positions(&mut self) -> Option<PositionMap> {
-        self.pmap.take().map(|pos| pos.into_inner())
+        self.pmap.take().map(RefCell::into_inner)
     }
 
     /// Parses zero or more expressions delimited by intertoken whitespace and
     /// followed by an end of file. An expression may be shadowed.
+    ///
+    /// # Errors
+    ///
+    /// If the input is not a valid script or if the script is not terminated
+    /// with an end of file, an error is returned.
     ///
     /// # Grammar
     ///
@@ -220,6 +228,11 @@ impl<'a, const ECO: Code> Sexpr<'a, ECO> {
 
     /// Reads the content of a file and parses it as a script by calling
     /// [`parse_script()`](Self::parse_script).
+    ///
+    /// # Errors
+    ///
+    /// If the file cannot be read, the input is not a valid script or the
+    /// script is not terminated with an end of file, an error is returned.
     pub fn parse_file<P: AsRef<Path>>(&mut self, path: P) -> ParseResult<Box<[Value<'a>]>> {
         use error::code::ERR_FILE;
 
@@ -270,6 +283,7 @@ mod vector;
 mod whitespace;
 
 pub use datum::Datum;
+#[allow(clippy::module_name_repetitions)]
 pub use error::{code, SexprError};
 
 #[cfg(test)]
@@ -283,7 +297,7 @@ mod tests {
     #[test]
     fn parse_success() {
         let m = Mutator::new_ref();
-        let mut p = Sexpr::<0>::new(m.to_owned());
+        let mut p = Sexpr::<0>::new(m.clone());
 
         let result = p.parse("; Adding two numbers\n(+ 1 2) ".into());
         assert_eq!(result, Ok((sexpr!(m, "(+ 1 2)"), Input::new(""))));
@@ -292,22 +306,23 @@ mod tests {
     #[test]
     fn parse_files_success() {
         let m = Mutator::new_ref();
-        let mut p = Sexpr::<0>::new(m.to_owned());
+        let mut p = Sexpr::<0>::new(m.clone());
 
-        parse_file_chapter_01(m.to_owned(), &mut p);
-        parse_file_chapter_02(m.to_owned(), &mut p);
-        parse_file_chapter_03(m.to_owned(), &mut p);
-        parse_file_chapter_04(m.to_owned(), &mut p);
-        parse_file_chapter_05(m.to_owned(), &mut p);
-        parse_file_chapter_06(m.to_owned(), &mut p);
-        parse_file_chapter_07(m.to_owned(), &mut p);
-        parse_file_chapter_08(m.to_owned(), &mut p);
-        parse_file_chapter_09(m.to_owned(), &mut p);
-        parse_file_chapter_10(m.to_owned(), &mut p);
+        parse_file_chapter_01(m.clone(), &mut p);
+        parse_file_chapter_02(m.clone(), &mut p);
+        parse_file_chapter_03(m.clone(), &mut p);
+        parse_file_chapter_04(m.clone(), &mut p);
+        parse_file_chapter_05(m.clone(), &mut p);
+        parse_file_chapter_06(m.clone(), &mut p);
+        parse_file_chapter_07(m.clone(), &mut p);
+        parse_file_chapter_08(m.clone(), &mut p);
+        parse_file_chapter_09(m.clone(), &mut p);
+        parse_file_chapter_10(m.clone(), &mut p);
         parse_file_the_little_schemer(&mut p);
         // dbg!(m.borrow().stats());
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_01(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-01.scm");
         let result = p.parse_file("tests/sexpr/chapter-01.scm");
@@ -320,6 +335,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_02(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-02.scm");
         let result = p.parse_file("tests/sexpr/chapter-02.scm");
@@ -332,6 +348,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_03(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-03.scm");
         let result = p.parse_file("tests/sexpr/chapter-03.scm");
@@ -344,6 +361,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_04(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-04.scm");
         let result = p.parse_file("tests/sexpr/chapter-04.scm");
@@ -356,6 +374,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_05(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-05.scm");
         let result = p.parse_file("tests/sexpr/chapter-05.scm");
@@ -368,6 +387,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_06(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-06.scm");
         let result = p.parse_file("tests/sexpr/chapter-06.scm");
@@ -380,6 +400,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_07(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-07.scm");
         let result = p.parse_file("tests/sexpr/chapter-07.scm");
@@ -392,6 +413,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_08(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-08.scm");
         let result = p.parse_file("tests/sexpr/chapter-08.scm");
@@ -404,6 +426,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_09(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-09.scm");
         let result = p.parse_file("tests/sexpr/chapter-09.scm");
@@ -416,6 +439,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     fn parse_file_chapter_10(m: MutatorRef<'_>, p: &mut Sexpr<0>) {
         let expected = &sexpr_file!(m, "tests/sexpr/chapter-10.scm");
         let result = p.parse_file("tests/sexpr/chapter-10.scm");

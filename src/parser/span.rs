@@ -42,7 +42,7 @@ impl Span {
     pub fn new(start: impl Into<Position>, end: impl Into<Position>) -> Self {
         let start = start.into();
         let end = end.into();
-        
+
         assert!(start <= end, "start > end");
         Self { start, end }
     }
@@ -71,12 +71,14 @@ impl Span {
     }
 
     /// Returns the start position of the span.
+    #[must_use]
     #[inline]
     pub const fn start(&self) -> Position {
         self.start
     }
 
     /// Returns the end position of the span.
+    #[must_use]
     #[inline]
     pub const fn end(&self) -> Position {
         self.end
@@ -84,12 +86,14 @@ impl Span {
 
     /// Returns the byte offset of the start of the fragment relatively to the
     /// input. It starts at 0.
+    #[must_use]
     #[inline]
     pub const fn offset(&self) -> usize {
         self.start.offset()
     }
 
     /// Returns the line number on which the span starts. It starts at 1.
+    #[must_use]
     #[inline]
     pub const fn line(&self) -> usize {
         self.start.line()
@@ -97,6 +101,7 @@ impl Span {
 
     /// Returns the charcater (utf-8 encoded) column the span start. It starts
     /// at 1.
+    #[must_use]
     #[inline]
     pub const fn column(&self) -> usize {
         self.start.column()
@@ -120,15 +125,15 @@ impl Span {
     ///
     /// assert_eq!(span.line_str("abc\ndef"), "def");
     /// ```
+    #[must_use]
     pub fn line_str<'a>(&self, source: &'a str) -> &'a str {
         let column0 = self.before(source).0 - 1;
         let line = source[self.start.offset() - column0..].as_bytes();
 
         unsafe {
-            std::str::from_utf8_unchecked(match memchr::memchr(b'\n', &line[column0..]) {
-                None => line,
-                Some(pos) => &line[..column0 + pos],
-            })
+            std::str::from_utf8_unchecked(
+                memchr::memchr(b'\n', &line[column0..]).map_or(line, |pos| &line[..column0 + pos]),
+            )
         }
     }
 
@@ -146,6 +151,7 @@ impl Span {
     ///
     /// assert_eq!(span.fragment("abc"), "ab");
     /// ```
+    #[must_use]
     #[inline]
     pub fn fragment<'a>(&self, source: &'a str) -> &'a str {
         &source[self.start.offset()..self.end.offset()]
@@ -156,21 +162,21 @@ impl Span {
     /// arbitrarily string will be returned.
     fn before<'a>(&self, source: &'a str) -> (usize, &'a [u8]) {
         let before_self = source[..self.offset()].as_bytes();
-        let offset = match memchr::memrchr(b'\n', before_self) {
-            None => self.start.offset() + 1,
-            Some(pos) => self.start.offset() - pos,
-        };
+        let offset = memchr::memrchr(b'\n', before_self)
+            .map_or_else(|| self.start.offset() + 1, |pos| self.start.offset() - pos);
 
         (offset, &before_self[self.start.offset() - (offset - 1)..])
     }
 
     /// Return the length of the span in bytes.
+    #[must_use]
     #[inline]
     pub const fn len(&self) -> usize {
         self.end.offset() - self.start.offset()
     }
 
     /// Return if the span is empty.
+    #[must_use]
     #[inline]
     pub const fn is_empty(&self) -> bool {
         self.len() == 0

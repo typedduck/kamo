@@ -25,26 +25,33 @@ where
     F: Fn(char) -> bool + Copy,
 {
     move |input| {
-        if let Some(ch) = input.current() {
-            if predicate(ch) {
-                let mut cursor = input;
+        input.current().map_or_else(
+            || Err(ParseError::eof(input).and(input, code::ERR_SATISFY, CharacterError::Satisfy)),
+            |ch| {
+                if predicate(ch) {
+                    let mut cursor = input;
 
-                cursor.advance();
-                Ok((ch, cursor))
-            } else {
-                Err(ParseError::new(
-                    input,
-                    code::ERR_SATISFY,
-                    CharacterError::Satisfy,
-                ))
-            }
-        } else {
-            Err(ParseError::eof(input).and(input, code::ERR_SATISFY, CharacterError::Satisfy))
-        }
+                    cursor.advance();
+                    Ok((ch, cursor))
+                } else {
+                    Err(ParseError::new(
+                        input,
+                        code::ERR_SATISFY,
+                        CharacterError::Satisfy,
+                    ))
+                }
+            },
+        )
     }
 }
 
 /// Matches any character.
+///
+/// # Errors
+///
+/// If the input is empty, it returns a [`ParseError`] with the code
+/// [`ERR_ANY_CHAR`](code::ERR_ANY_CHAR) and the error variant
+/// [`CharacterError::AnyChar`].
 ///
 /// # Example
 ///
@@ -53,7 +60,7 @@ where
 /// let mut parser = any_char;
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(('a', "bc".into())));
-/// 
+///
 /// let error = parser.parse("".into()).expect_err("error output");
 ///
 /// assert!(error.is_eof());
@@ -64,14 +71,15 @@ where
 /// ));
 /// ```
 pub fn any_char(input: Input<'_>) -> ParseResult<char> {
-    if let Some(ch) = input.current() {
-        let mut cursor = input;
+    input.current().map_or_else(
+        || Err(ParseError::eof(input).and(input, code::ERR_ANY_CHAR, CharacterError::AnyChar)),
+        |ch| {
+            let mut cursor = input;
 
-        cursor.advance();
-        Ok((ch, cursor))
-    } else {
-        Err(ParseError::eof(input).and(input, code::ERR_ANY_CHAR, CharacterError::AnyChar))
-    }
+            cursor.advance();
+            Ok((ch, cursor))
+        },
+    )
 }
 
 /// Matches the given character.
@@ -88,7 +96,7 @@ pub fn any_char(input: Input<'_>) -> ParseResult<char> {
 ///     code::ERR_CHAR,
 ///     CharacterError::Char('b')
 /// )));
-/// 
+///
 /// let error = parser.parse("".into()).expect_err("error output");
 ///
 /// assert!(error.is_eof());
@@ -125,7 +133,7 @@ pub const fn char(value: char) -> impl Fn(Input) -> ParseResult<char> + Copy {
 ///     code::ERR_TAG,
 ///     CharacterError::Tag("abc")
 /// )));
-/// 
+///
 /// let error = parser.parse("ab".into()).expect_err("error output");
 ///
 /// assert!(error.is_eof());
@@ -179,7 +187,7 @@ pub fn tag(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a,
 ///     code::ERR_NONE_OF,
 ///     CharacterError::NoneOf("abc")
 /// )));
-/// 
+///
 /// let error = parser.parse("".into()).expect_err("error output");
 ///
 /// assert!(error.is_eof());
@@ -191,26 +199,29 @@ pub fn tag(value: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a,
 /// ```
 pub fn none_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, char> {
     move |input| {
-        if let Some(ch) = input.current() {
-            if values.chars().any(|value| value == ch) {
-                Err(ParseError::new(
+        input.current().map_or_else(
+            || {
+                Err(ParseError::eof(input).and(
                     input,
                     code::ERR_NONE_OF,
                     CharacterError::NoneOf(values),
                 ))
-            } else {
-                let mut cursor = input;
+            },
+            |ch| {
+                if values.chars().any(|value| value == ch) {
+                    Err(ParseError::new(
+                        input,
+                        code::ERR_NONE_OF,
+                        CharacterError::NoneOf(values),
+                    ))
+                } else {
+                    let mut cursor = input;
 
-                cursor.advance();
-                Ok((ch, cursor))
-            }
-        } else {
-            Err(ParseError::eof(input).and(
-                input,
-                code::ERR_NONE_OF,
-                CharacterError::NoneOf(values),
-            ))
-        }
+                    cursor.advance();
+                    Ok((ch, cursor))
+                }
+            },
+        )
     }
 }
 
@@ -228,7 +239,7 @@ pub fn none_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResul
 ///     code::ERR_ONE_OF,
 ///     CharacterError::OneOf("abc")
 /// )));
-/// 
+///
 /// let error = parser.parse("".into()).expect_err("error output");
 ///
 /// assert!(error.is_eof());
@@ -240,26 +251,29 @@ pub fn none_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResul
 /// ```
 pub fn one_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, char> {
     move |input| {
-        if let Some(ch) = input.current() {
-            if values.chars().any(|value| value == ch) {
-                let mut cursor = input;
-
-                cursor.advance();
-                Ok((ch, cursor))
-            } else {
-                Err(ParseError::new(
+        input.current().map_or_else(
+            || {
+                Err(ParseError::eof(input).and(
                     input.position(),
                     code::ERR_ONE_OF,
                     CharacterError::OneOf(values),
                 ))
-            }
-        } else {
-            Err(ParseError::eof(input).and(
-                input.position(),
-                code::ERR_ONE_OF,
-                CharacterError::OneOf(values),
-            ))
-        }
+            },
+            |ch| {
+                if values.chars().any(|value| value == ch) {
+                    let mut cursor = input;
+
+                    cursor.advance();
+                    Ok((ch, cursor))
+                } else {
+                    Err(ParseError::new(
+                        input.position(),
+                        code::ERR_ONE_OF,
+                        CharacterError::OneOf(values),
+                    ))
+                }
+            },
+        )
     }
 }
 
@@ -274,7 +288,7 @@ pub fn one_of(values: &'static str) -> impl for<'a> Fn(Input<'a>) -> ParseResult
 /// assert_eq!(parser.parse("defa".into()), Ok(("def", "a".into())));
 /// assert_eq!(parser.parse("defb".into()), Ok(("def", "b".into())));
 /// assert_eq!(parser.parse("defc".into()), Ok(("def", "c".into())));
-/// 
+///
 /// let error = parser.parse("def".into()).expect_err("error output");
 ///
 /// assert!(error.is_eof());

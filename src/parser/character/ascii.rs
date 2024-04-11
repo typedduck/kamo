@@ -41,6 +41,10 @@ use super::{char, CharacterError};
 
 /// Matches zero or more alphabetical characters: `[a-zA-Z]`.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -63,6 +67,13 @@ pub fn alpha0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches at least one alphabetical character: `[a-zA-Z]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not an alphabetical
+/// character, it returns a [`ParseError`] with the error code
+/// [`ERR_ALPHA`](code::ERR_ALPHA) and the error variant
+/// [`CharacterError::Alpha`].
 ///
 /// # Examples
 ///
@@ -110,6 +121,10 @@ pub fn alpha1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more alphanumeric characters: `[a-zA-Z0-9]`.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -134,6 +149,13 @@ pub fn alphanum0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches at least one alphanumeric character: `[a-zA-Z0-9]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not an alphanumeric
+/// character, it returns a [`ParseError`] with the error code
+/// [`ERR_ALPHANUM`](code::ERR_ALPHANUM) and the error variant
+/// [`CharacterError::AlphaNum`].
 ///
 /// # Examples
 ///
@@ -182,6 +204,10 @@ pub fn alphanum1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more decimal digits: `[0-9]`.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -206,6 +232,12 @@ pub fn digit0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches at least one decimal digit: `[0-9]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a decimal digit, it
+/// returns a [`ParseError`] with the error code [`ERR_DIGIT`](code::ERR_DIGIT)
+/// and the error variant [`CharacterError::Digit`].
 ///
 /// # Examples
 ///
@@ -254,6 +286,10 @@ pub fn digit1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more binary digits: `[0-1]`.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -278,6 +314,13 @@ pub fn bin_digit0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches at least one binary digit: `[0-1]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a binary digit, it
+/// returns a [`ParseError`] with the error code
+/// [`ERR_BIN_DIGIT`](code::ERR_BIN_DIGIT) and the error variant
+/// [`CharacterError::BinDigit`].
 ///
 /// # Examples
 ///
@@ -326,6 +369,10 @@ pub fn bin_digit1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more octal digits: `[0-7]`.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -350,6 +397,13 @@ pub fn oct_digit0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches at least one octal digit: `[0-7]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not an octal digit, it
+/// returns a [`ParseError`] with the error code
+/// [`ERR_OCT_DIGIT`](code::ERR_OCT_DIGIT) and the error variant
+/// [`CharacterError::OctDigit`].
 ///
 /// # Examples
 ///
@@ -398,6 +452,10 @@ pub fn oct_digit1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more hexadecimal digits: `[0-9A-Fa-f]`.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -422,6 +480,13 @@ pub fn hex_digit0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches at least one hexadecimal digit: `[0-9A-Fa-f]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a hexadecimal digit, it
+/// returns a [`ParseError`] with the error code
+/// [`ERR_HEX_DIGIT`](code::ERR_HEX_DIGIT) and the error variant
+/// [`CharacterError::HexDigit`].
 ///
 /// # Examples
 ///
@@ -471,6 +536,10 @@ pub fn hex_digit1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more whitespaces: `[ \t\n\r]`.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -495,6 +564,13 @@ pub fn whitespace0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches at least one whitespace: `[ \t\n\r]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a whitespace character,
+/// it returns a [`ParseError`] with the error code
+/// [`ERR_WHITESPACE`](code::ERR_WHITESPACE) and the error variant
+/// [`CharacterError::Whitespace`].
 ///
 /// # Examples
 ///
@@ -543,6 +619,10 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more spaces: `[ \t]`.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -565,6 +645,12 @@ pub fn space0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches at least one space: `[ \t]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a space character, it
+/// returns a [`ParseError`] with the error code [`ERR_SPACE`](code::ERR_SPACE)
+/// and the error variant [`CharacterError::Space`].
 ///
 /// # Examples
 ///
@@ -614,6 +700,10 @@ pub fn space1(input: Input<'_>) -> ParseResult<&str> {
 ///
 /// Note that this does not include the space `U+0020` character.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Examples
 ///
 /// ```rust
@@ -638,6 +728,13 @@ pub fn graphic0(input: Input<'_>) -> ParseResult<&str> {
 /// Matches at least one ASCII graphic character: `[!-~]`, `U+0021..U+007E`.
 ///
 /// Note that this does not include the space `U+0020` character.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not an ASCII graphic
+/// character, it returns a [`ParseError`] with the error code
+/// [`ERR_GRAPHIC`](code::ERR_GRAPHIC) and the error variant
+/// [`CharacterError::Graphic`].
 ///
 /// # Examples
 ///
@@ -684,6 +781,13 @@ pub fn graphic1(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches one or more line endings: `[\r]?[\n]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a line ending, it
+/// returns a [`ParseError`] with the error code
+/// [`ERR_LINE_ENDING`](code::ERR_LINE_ENDING) and the error variant
+/// [`CharacterError::LineEnding`].
 ///
 /// # Examples
 ///
@@ -734,7 +838,7 @@ pub fn line_ending(input: Input<'_>) -> ParseResult<&str> {
 
     match cursor.current() {
         Some('\r') => {
-            if let Some('\n') = cursor.advance() {
+            if cursor.advance() == Some('\n') {
                 cursor.advance();
                 Ok(("\r\n", cursor))
             } else {
@@ -763,6 +867,13 @@ pub fn line_ending(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches a carriage return followed by a line feed: `[\r][\n]`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a carriage return
+/// followed by a line feed, it returns a [`ParseError`] with the error code
+/// [`ERR_LINE_ENDING`](code::ERR_LINE_ENDING) and the error variant
+/// [`CharacterError::Crlf`].
 ///
 /// # Examples
 ///
@@ -814,18 +925,28 @@ pub fn crlf(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches a newline character: `[\n]`.
 ///
-/// It is an alias for [`char('\n')`](super::char).
+/// # Errors
+///
+/// If the input is empty or the first character is not a newline character, it
+/// returns a [`ParseError`] with the error code
+/// [`ERR_NEWLINE`](code::ERR_NEWLINE) and the error variant
+/// [`CharacterError::Newline`].
 #[inline]
 pub fn newline(input: Input<'_>) -> ParseResult<char> {
-    char('\n')(input)
+    char('\n')(input).map_err(|error| error.and(input, code::ERR_NEWLINE, CharacterError::Newline))
 }
 
 /// Matches a tab character: `[\t]`.
 ///
-/// It is an alias for [`char('\t')`](super::char).
+/// # Errors
+///
+/// If the input is empty or the first character is not a tab character, it
+/// returns a [`ParseError`] with the error code
+/// [`ERR_TAB`](code::ERR_TAB) and the error variant
+/// [`CharacterError::Tab`].
 #[inline]
 pub fn tab(input: Input<'_>) -> ParseResult<char> {
-    char('\t')(input)
+    char('\t')(input).map_err(|error| error.and(input, code::ERR_TAB, CharacterError::Tab))
 }
 
 #[cfg(test)]

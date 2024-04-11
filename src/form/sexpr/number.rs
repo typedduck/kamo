@@ -17,6 +17,12 @@ use super::{
 impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// Parses a number literal.
     ///
+    /// # Errors
+    ///
+    /// An error is returned if the input is empty or if the input is not a
+    /// valid number literal. Returns a [`ParseError`] with the code
+    /// [`ERR_NUMBER_LITERAL`] and the message [`SexprError::NumberLiteral`].
+    ///
     /// # Grammar
     ///
     /// ```text
@@ -66,6 +72,12 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
     /// Parses a binary number literal.
     ///
+    /// # Errors
+    ///
+    /// An error is returned if the input is empty or if the input is not a
+    /// valid binary number literal. Returns a [`ParseError`] with the code
+    /// [`ERR_BINARY_LITERAL`] and the message [`SexprError::BinaryLiteral`].
+    ///
     /// # Grammar
     ///
     /// ```text
@@ -78,6 +90,12 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     }
 
     /// Parses an octal number literal.
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if the input is empty or if the input is not a
+    /// valid octal number literal. Returns a [`ParseError`] with the code
+    /// [`ERR_OCTAL_LITERAL`] and the message [`SexprError::OctalLiteral`].
     ///
     /// # Grammar
     ///
@@ -92,6 +110,12 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
     /// Parses a hexadecimal number literal.
     ///
+    /// # Errors
+    ///
+    /// An error is returned if the input is empty or if the input is not a
+    /// valid hexadecimal number literal. Returns a [`ParseError`] with the code
+    /// [`ERR_HEXDEC_LITERAL`] and the message [`SexprError::HexdecLiteral`].
+    ///
     /// # Grammar
     ///
     /// ```text
@@ -104,6 +128,13 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     }
 
     /// Parses a decimal number literal.
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if the input is empty or if the input is not a
+    /// valid prefixed decimal number literal. Returns a [`ParseError`] with the
+    /// code [`ERR_DECIMAL_LITERAL`] and the message
+    /// [`SexprError::DecimalLiteral`].
     ///
     /// # Grammar
     ///
@@ -127,6 +158,12 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
     /// Parses a decimal literal.
     ///
+    /// # Errors
+    ///
+    /// An error is returned if the input is empty or if the input is not a
+    /// valid decimal number literal. Returns a [`ParseError`] with the code
+    /// [`ERR_DECIMAL_LITERAL`] and the message [`SexprError::DecimalLiteral`].
+    ///
     /// # Grammar
     ///
     /// ```text
@@ -137,18 +174,18 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// sign             = ("+" | "-")?
     /// ```
     pub fn decimal(input: Input<'b>) -> ParseResult<'b, Value<'a>> {
-        let (_, cursor) = Self::sign(input)?;
+        let ((), cursor) = Self::sign(input)?;
 
         if let Ok((_, cursor)) = ascii::digit1(cursor) {
             match cursor.current() {
                 Some('.') => {
-                    let (_, cursor) = Self::decimal_fraction(cursor)?;
+                    let ((), cursor) = Self::decimal_fraction(cursor)?;
                     let (num, cursor) = Self::convert2float(input, cursor)?;
 
                     Ok((Value::new_float(num), cursor))
                 }
-                Some('e') | Some('E') => {
-                    let (_, cursor) = Self::decimal_suffix(cursor)?;
+                Some('e' | 'E') => {
+                    let ((), cursor) = Self::decimal_suffix(cursor)?;
                     let (num, cursor) = Self::convert2float(input, cursor)?;
 
                     Ok((Value::new_float(num), cursor))
@@ -159,8 +196,8 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
                     Ok((Value::new_int(num), cursor))
                 }
             }
-        } else if let Some('.') = cursor.current() {
-            let (_, cursor) = Self::decimal_fraction(cursor)?;
+        } else if cursor.current() == Some('.') {
+            let ((), cursor) = Self::decimal_fraction(cursor)?;
             let (num, cursor) = Self::convert2float(input, cursor)?;
 
             Ok((Value::new_float(num), cursor))
@@ -183,7 +220,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
         })?;
 
         match cursor.current() {
-            Some('e') | Some('E') => Self::decimal_suffix(cursor),
+            Some('e' | 'E') => Self::decimal_suffix(cursor),
             _ => Ok(((), cursor)),
         }
     }
@@ -204,6 +241,13 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     }
 
     /// Parses a floating-point infinite or NaN literal.
+    ///
+    /// # Errors
+    ///
+    /// An error is returned if the input is empty or if the input is not a
+    /// valid floating-point infinite or NaN literal. Returns a [`ParseError`]
+    /// with the code [`ERR_FLOAT_INFNAN`] and the message
+    /// [`SexprError::FloatInfNaN`].
     ///
     /// # Grammar
     ///

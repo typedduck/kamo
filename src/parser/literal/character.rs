@@ -5,6 +5,12 @@ use super::{escaped_char, LiteralError};
 /// Parses a quoted character literal. The syntax is mostly what you would
 /// expect from a character literal in most programming languages.
 ///
+/// # Errors
+///
+/// An error will occur if the input is empty or the character is not a valid
+/// character. The error code is [`ERR_QUOTED_CHAR`](code::ERR_QUOTED_CHAR) and
+/// the error variant is [`LiteralError::QuotedChar`].
+///
 /// # Grammar:
 ///
 /// ```text
@@ -32,7 +38,10 @@ pub fn quoted_char(input: Input<'_>) -> ParseResult<'_, char> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{parser::{ParseError, Span}, Position};
+    use crate::{
+        parser::{ParseError, Span},
+        Position,
+    };
 
     use super::*;
 

@@ -4,6 +4,15 @@ use super::LiteralError;
 
 /// Recognizes a floating-point number exponent.
 ///
+/// The exponent is a number that follows the `e` or `E` character in a
+/// floating-point number literal.
+///
+/// # Errors
+///
+/// An error will occur if the exponent is not a valid number. The error code is
+/// [`ERR_EXPONENT_FORMAT`](code::ERR_EXPONENT_FORMAT) and the error variant is
+/// [`LiteralError::ExponentFormat`].
+///
 /// # Grammar:
 ///
 /// ```text
@@ -28,6 +37,15 @@ pub fn recognize_exponent(input: Input<'_>) -> ParseResult<'_, &str> {
 /// Recognizes a floating-point number literal.
 ///
 /// If `signed` is `true` the literal can have an optional sign `[+\-]`.
+/// The literal can be an infinity `inf`, `infinity`, or a NaN `nan`, `NaN`.
+/// The literal can also be a number with an optional decimal point and
+/// exponent.
+///
+/// # Errors
+///
+/// An error will occur if the literal is not a valid floating-point number. The
+/// error code is [`ERR_FLOAT_FORMAT`](code::ERR_FLOAT_FORMAT) and the error
+/// variant is [`LiteralError::FloatFormat`].
 ///
 /// # Grammar:
 ///
@@ -38,6 +56,7 @@ pub fn recognize_exponent(input: Input<'_>) -> ParseResult<'_, &str> {
 /// Sign   = [+\-]
 /// Digit  = [0-9]
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn recognize_float(signed: bool) -> impl FnMut(Input<'_>) -> ParseResult<'_, &str> {
     move |input| {
         let sign = any((char('+'), char('-')));
@@ -57,18 +76,19 @@ pub fn recognize_float(signed: bool) -> impl FnMut(Input<'_>) -> ParseResult<'_,
             ))),
         ));
 
-        match signed {
-            true => recognize(tuple((
+        if signed {
+            recognize(tuple((
                 opt(sign),
                 any((tag("infinity"), tag("inf"), tag("nan"), tag("NaN"), number)),
-            )))(input),
-            false => recognize(any((
+            )))(input)
+        } else {
+            recognize(any((
                 tag("infinity"),
                 tag("inf"),
                 tag("nan"),
                 tag("NaN"),
                 number,
-            )))(input),
+            )))(input)
         }
         .map_err(|mut err| {
             err.push(input, code::ERR_FLOAT_FORMAT, LiteralError::FloatFormat);
@@ -150,7 +170,7 @@ mod tests {
 
     #[test]
     fn recognize_float_success() {
-        for value in FLOATS.iter() {
+        for value in &FLOATS {
             let input = Input::new(value);
             let result = recognize_float(true)(input);
             assert_eq!(result, Ok((*value, Input::new(""))));
@@ -159,7 +179,7 @@ mod tests {
 
     #[test]
     fn float_success() {
-        for value in FLOATS.iter() {
+        for value in &FLOATS {
             let input = Input::new(value);
             let result = float(true)(input);
             let value = value.parse::<f64>().unwrap();

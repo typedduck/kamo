@@ -32,9 +32,10 @@ const UNEXPECTED_END_OF_FILE: &str = "unexpected end of file";
 /// semantic error implies that the input was read correctly until to the end.
 /// For example, a number may be syntactically correct but it may be out of
 /// range.
-/// 
+///
 /// An error can be set to be a failure. A failure error prevents alternative
 /// parsers from being tried. Optional parsers will return an error, too.
+#[allow(clippy::module_name_repetitions)]
 pub struct ParseError {
     /// Index of the latest Cause in the error stack which indicates an
     /// unexpected end of file.
@@ -89,6 +90,7 @@ impl ParseError {
 
     /// Chaining a new [`Cause`] onto the error stack with the given `span`,
     /// `code` and `message`.
+    #[must_use]
     pub fn and<S, M>(self, span: S, code: Code, message: M) -> Self
     where
         S: Into<Span>,
@@ -105,23 +107,26 @@ impl ParseError {
     /// input but by the semantic of the input. A semantic error implies that
     /// the input was read correctly until to the end. For example, a number may
     /// syntactically correct but it may be out of range.
-    pub fn and_semantic(self) -> Self {
+    #[must_use]
+    pub const fn and_semantic(self) -> Self {
         let mut this = self;
-        this.set_semantic();
+        this.semantic = true;
         this
     }
 
     /// Sets the error to be a failure and chaining it.
-    /// 
+    ///
     /// A failure error prevents alternative parsers from being tried. Optional
     /// parsers will return an error, too.
-    pub fn and_failure(self) -> Self {
+    #[must_use]
+    pub const fn and_failure(self) -> Self {
         let mut this = self;
         this.failure = true;
         this
     }
 
     /// Sets the source of the error and chaining it.
+    #[must_use]
     pub fn and_source(self, source: impl StdError + 'static) -> Self {
         let mut this = self;
         this.set_source(source);
@@ -130,6 +135,11 @@ impl ParseError {
 
     /// Pushes a new [`Cause`] onto the error stack with the given `span`,
     /// `code` and `message`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the number of [`Cause`]s in the error stack is greater than
+    /// [`u16::MAX`].
     pub fn push<S, M>(&mut self, span: S, code: Code, message: M)
     where
         S: Into<Span>,
@@ -137,7 +147,7 @@ impl ParseError {
     {
         self.stack.push(Cause::new(span, code, message));
         if code == ERR_EOF && self.eof.is_none() {
-            self.eof = Some((self.stack.len() - 1).try_into().unwrap());
+            self.eof = Some((self.stack.len() - 1).try_into().expect("too many errors"));
         }
     }
 
@@ -149,6 +159,12 @@ impl ParseError {
     }
 
     /// The top most [`Cause`] is returned.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the error stack is empty. This should never happen because
+    /// the error stack is always initialized with at least one [`Cause`].
+    #[must_use]
     #[inline]
     pub fn cause(&self) -> &Cause {
         self.stack.last().expect("empty error stack")
@@ -162,18 +178,21 @@ impl ParseError {
     }
 
     /// Returns the [`Span`] of the latest [`Cause`] in the error stack.
+    #[must_use]
     #[inline]
     pub fn span(&self) -> Span {
         self.cause().span()
     }
 
     /// Returns the error code of the latest [`Cause`] in the error stack.
+    #[must_use]
     #[inline]
     pub fn code(&self) -> Code {
         self.cause().code()
     }
 
     /// Returns the error message of the latest [`Cause`] in the error stack.
+    #[must_use]
     #[inline]
     pub fn message(&self) -> &str {
         self.cause().message()
@@ -181,8 +200,9 @@ impl ParseError {
 
     /// Returns `true` if the error stack contains a [`Cause`] which indicates
     /// an unexpected end of file.
+    #[must_use]
     #[inline]
-    pub fn is_eof(&self) -> bool {
+    pub const fn is_eof(&self) -> bool {
         self.eof.is_some()
     }
 
@@ -192,6 +212,7 @@ impl ParseError {
     /// input but by the semantic of the input. A semantic error implies that
     /// the input was read correctly until to the end. For example, a number may
     /// syntactically correct but it may be out of range.
+    #[must_use]
     #[inline]
     pub const fn is_semantic(&self) -> bool {
         self.semantic
@@ -209,6 +230,7 @@ impl ParseError {
     }
 
     /// Returns `true` if the error is a failure.
+    #[must_use]
     #[inline]
     pub const fn is_failure(&self) -> bool {
         self.failure
@@ -266,15 +288,15 @@ impl fmt::Debug for ParseError {
             if self.stack.len() > 1 {
                 write!(f, "\nCaused by:")?;
                 for cause in self.causes().skip(1) {
-                    write!(f, "\n       {:#?}", cause)?;
+                    write!(f, "\n       {cause:#?}")?;
                 }
             }
             if let Some(source) = self.source.as_ref() {
-                write!(f, "\nSource:\n       {}", source)?;
+                write!(f, "\nSource:\n       {source}")?;
 
                 let mut cursor = source.source();
                 while let Some(source) = cursor {
-                    write!(f, "\n       {}", source)?;
+                    write!(f, "\n       {source}")?;
                     cursor = source.source();
                 }
             }
@@ -284,7 +306,7 @@ impl fmt::Debug for ParseError {
             if self.stack.len() > 1 {
                 write!(f, "\nCaused by:")?;
                 for cause in self.causes().skip(1) {
-                    write!(f, "\n       {:?}", cause)?;
+                    write!(f, "\n       {cause:?}")?;
                 }
             }
         }

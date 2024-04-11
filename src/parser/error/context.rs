@@ -37,7 +37,7 @@ where
             err.push(
                 Span::new(input.position(), err.span().end()),
                 code::ERR_CONTEXT,
-                msg.to_owned(),
+                msg.clone(),
             );
             err
         })
@@ -59,6 +59,7 @@ where
 ///     code::ERR_TAG,
 ///     "Expected `hello`"
 /// )));
+#[allow(clippy::module_name_repetitions)]
 pub fn context_as<'a, 'b, F, O, M>(
     mut f: F,
     code: Code,
@@ -76,7 +77,7 @@ where
             err.push(
                 Span::new(input.position(), err.span().end()),
                 code,
-                msg.to_owned(),
+                msg.clone(),
             );
             err
         })
@@ -102,6 +103,7 @@ where
 ///     "Expected `hello`"
 /// )));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn context_and<'a, 'b, F1, F2, O>(
     mut f: F1,
     mut g: F2,
@@ -126,7 +128,7 @@ where
 /// The closure is called with the span of the whole input parsed and the output
 /// of the parser. If the closure returns `Some`, the error returned is marked
 /// as a semantic error. Otherwise, the error of the parser is returned as is.
-/// 
+///
 /// # Examples
 ///
 /// ```rust
@@ -159,13 +161,8 @@ where
     move |input| {
         let result = f.parse(input);
         match result {
-            Ok((output, cursor)) => {
-                if let Some(err) = g(Span::new(input, cursor), &output) {
-                    Err(err.and_semantic())
-                } else {
-                    Ok((output, cursor))
-                }
-            }
+            Ok((output, cursor)) => g(Span::new(input, cursor), &output)
+                .map_or_else(|| Ok((output, cursor)), |err| Err(err.and_semantic())),
             Err(err) => Err(err),
         }
     }
@@ -210,13 +207,13 @@ where
     O: 'b,
     F: Parser<'a, 'b, O> + 'b,
 {
-    move |input| f.parse(input).map_err(|err| err.and_failure())
+    move |input| f.parse(input).map_err(ParseError::and_failure)
 }
 
 /// Maps the error of the parser with a closure.
-/// 
+///
 /// # Examples
-/// 
+///
 /// ```rust
 /// # use kamo::{Position, parser::{prelude::*, code, Input, Span}};
 /// let mut parser = map_err(tag("hello"), |err| {
@@ -226,7 +223,7 @@ where
 ///         "Expected `hello`",
 ///     )
 /// });
-/// 
+///
 /// assert_eq!(parser.parse("world".into()), Err(ParseError::new(
 ///     Span::new(Position::new(0, 1, 1), Position::new(5, 1, 6)),
 ///     code::ERR_CONTEXT,

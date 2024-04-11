@@ -1,6 +1,7 @@
 use std::fmt;
 
 /// Definition of the error messages of the character parsers.
+#[allow(clippy::module_name_repetitions)]
 pub enum CharacterError {
     /// The parser was unable to match an alphabetic character.
     Alpha,
@@ -26,12 +27,16 @@ pub enum CharacterError {
     Space,
     /// The parser was unable to match a graphic character.
     Graphic,
+    /// The parser was unable to match a tabulator.
+    Tab,
     /// The parser was unable to take the given number of characters.
     Take(usize),
     /// The parser was unable to take at least the given number of characters.
     TakeWhileM(usize),
     /// The parser was unable to take at least one character.
     TakeWhile1,
+    /// The parser was unable to match a newline.
+    Newline,
     /// The parser was unable to match a character that is not one of the given values.
     NoneOf(&'static str),
     /// The parser was unable to match a character that is one of the given values.
@@ -69,26 +74,28 @@ impl fmt::Display for CharacterError {
             Self::Alpha => write!(f, "expecting an alphabetic character [a-zA-Z]"),
             Self::AlphaNum => write!(f, "expecting an alphanumeric character [a-zA-Z0-9]"),
             Self::AnyChar => write!(f, "expecting any character"),
-            Self::Char(ch) => write!(f, "expecting the character '{:#}'", ch),
+            Self::Char(ch) => write!(f, "expecting the character '{ch:#}'"),
             Self::BinDigit => write!(f, "expecting a binary digit [0-1]"),
             Self::OctDigit => write!(f, "expecting an octal digit [0-7]"),
             Self::Digit => write!(f, "expecting a digit [0-9]"),
             Self::HexDigit => write!(f, "expecting a hexadecimal digit [0-9A-Fa-f]"),
-            Self::Tag(tag) => write!(f, "expecting the tag \"{:#}\"", tag),
+            Self::Tag(tag) => write!(f, "expecting the tag \"{tag:#}\""),
             Self::Whitespace => write!(f, "expecting a whitespace [ \\t\\n\\r]"),
             Self::Space => write!(f, "expecting a space [ \\t]"),
             Self::Graphic => write!(f, "expecting a graphic character [!-~]"),
-            Self::Take(m) => write!(f, "expecting exactly {} character(s)", m),
+            Self::Tab => write!(f, "expecting a tabulator [\\t]"),
+            Self::Take(m) => write!(f, "expecting exactly {m} character(s)"),
             Self::TakeWhileM(m) => {
-                write!(f, "expecting at least {} character(s)", m)
+                write!(f, "expecting at least {m} character(s)")
             }
             Self::TakeWhile1 => write!(f, "expecting at least one character"),
+            Self::Newline => write!(f, "expecting a newline [\\n]"),
             Self::NoneOf(values) => {
-                write!(f, "expecting a character that is not one of {:?}", values)
+                write!(f, "expecting a character that is not one of {values:?}")
             }
-            Self::OneOf(values) => write!(f, "expecting a character that is one of {:?}", values),
+            Self::OneOf(values) => write!(f, "expecting a character that is one of {values:?}"),
             Self::IsNot(values) => {
-                write!(f, "expecting a character that is one of {:?}", values)
+                write!(f, "expecting a character that is one of {values:?}")
             }
             Self::Satisfy => write!(f, "expecting a character that satisfies the predicate"),
             Self::LineEnding => write!(f, "expecting a line ending [\\r]?[\\n]"),

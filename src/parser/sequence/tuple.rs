@@ -14,6 +14,11 @@ where
 {
     /// The `parse_tuple` method is used to parse a sequence of multiple parsers
     /// and returns a tuple of the results of the parsers.
+    ///
+    /// # Errors
+    ///
+    /// The method returns an error if any of the parsers fail. The error
+    /// contains the position of the error, the error code, and the error kind.
     fn parse_tuple(&mut self, input: Input<'a>) -> ParseResult<'a, O>;
 
     /// The `tuple_len` method returns the number of parsers in the tuple.
@@ -171,18 +176,18 @@ tuple_impl!(1: out2, O2, F2; 2: out3, O3, F3; 3: out4, O4, F4; 4: out5, O5, F5; 
 ///     code::ERR_TUPLE,
 ///     SequenceError::Tuple(1, 2)
 /// )));
-/// 
+///
 /// let error = parser(Input::new("a")).expect_err("error output");
-/// 
+///
 /// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///    Position::new(1, 1, 2),
 ///    code::ERR_TUPLE,
 ///    SequenceError::Tuple(2, 2)
 /// ));
-/// 
+///
 /// let error = parser(Input::new("")).expect_err("error output");
-/// 
+///
 /// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
@@ -209,13 +214,13 @@ mod tests {
 
     #[test]
     fn tuple_0() {
-        let (_, input) = tuple(())(Input::new("abc")).expect("valid output");
+        let ((), input) = tuple(())(Input::new("abc")).expect("valid output");
 
         assert_eq!(input, Input::from("abc"));
         assert_eq!(input.current(), Some('a'));
         assert_eq!(input.position(), Position::new(0, 1, 1));
 
-        let (_, input) = tuple(())(Input::new("")).expect("valid output");
+        let ((), input) = tuple(())(Input::new("")).expect("valid output");
 
         assert_eq!(input, Input::from(""));
         assert_eq!(input.current(), None);

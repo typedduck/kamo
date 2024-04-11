@@ -14,7 +14,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// quote = "'" intertoken datum
     /// ```
     pub fn quote(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> + '_ {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         move |input| {
             map(
@@ -22,7 +22,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
                 |value| {
                     let quote = m.borrow_mut().new_symbol("quote");
 
-                    Value::new_list(m.to_owned(), [quote.into(), value])
+                    Value::new_list(m.clone(), [quote.into(), value])
                 },
             )(input)
         }
@@ -36,7 +36,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// quasiquote = "`" intertoken datum
     /// ```
     pub fn quasiquote(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> + '_ {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         move |input| {
             map(
@@ -44,7 +44,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
                 |value| {
                     let quote = m.borrow_mut().new_symbol("quasiquote");
 
-                    Value::new_list(m.to_owned(), [quote.into(), value])
+                    Value::new_list(m.clone(), [quote.into(), value])
                 },
             )(input)
         }
@@ -58,7 +58,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// unquote = "," intertoken datum
     /// ```
     pub fn unquote(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> + '_ {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         move |input| {
             map(
@@ -66,7 +66,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
                 |value| {
                     let quote = m.borrow_mut().new_symbol("unquote");
 
-                    Value::new_list(m.to_owned(), [quote.into(), value])
+                    Value::new_list(m.clone(), [quote.into(), value])
                 },
             )(input)
         }
@@ -80,7 +80,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// unquote_splicing = ",@" intertoken datum
     /// ```
     pub fn unquote_splicing(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> + '_ {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         move |input| {
             map(
@@ -88,7 +88,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
                 |value| {
                     let quote = m.borrow_mut().new_symbol("unquote-splicing");
 
-                    Value::new_list(m.to_owned(), [quote.into(), value])
+                    Value::new_list(m.clone(), [quote.into(), value])
                 },
             )(input)
         }

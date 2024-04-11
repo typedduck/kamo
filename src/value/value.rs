@@ -1,5 +1,7 @@
 use std::{fmt, marker::PhantomData, ptr::NonNull};
 
+use smallvec::SmallVec;
+
 use crate::{
     mem::{Mutator, MutatorRef, Pointer, Root, ToRoot},
     value::SmartString,
@@ -41,36 +43,43 @@ impl<'a> Value<'a> {
     /* #region Constructors */
 
     /// Creates a new nil immediate-value.
+    #[must_use]
     #[inline]
     pub const fn new_nil() -> Self {
         Self::new(ValueKind::Nil)
     }
 
     /// Creates a new boolean immediate-value.
+    #[must_use]
     #[inline]
     pub const fn new_bool(value: bool) -> Self {
         Self::new(ValueKind::Bool(value))
     }
 
     /// Creates a new character immediate-value.
+    #[must_use]
     #[inline]
     pub const fn new_char(value: char) -> Self {
         Self::new(ValueKind::Char(value))
     }
 
     /// Creates a new integer immediate-value.
+    #[must_use]
     #[inline]
     pub const fn new_int(value: i64) -> Self {
         Self::new(ValueKind::Integer(value))
     }
 
     /// Creates a new float immediate-value.
+    #[must_use]
     #[inline]
     pub const fn new_float(value: f64) -> Self {
         Self::new(ValueKind::Float(value))
     }
 
     /// Creates a new symbol.
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_symbol(m: MutatorRef<'a>, name: impl AsRef<str>) -> Self {
         let symbol = m.borrow_mut().new_symbol(name);
@@ -78,6 +87,8 @@ impl<'a> Value<'a> {
     }
 
     /// Creates a new string.
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_string(m: MutatorRef<'a>, string: impl AsRef<str>) -> Self {
         let string = m.borrow_mut().new_string(string);
@@ -85,6 +96,8 @@ impl<'a> Value<'a> {
     }
 
     /// Creates a new byte-vector.
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_bytevec(m: MutatorRef<'a>, bytevec: impl AsRef<[u8]>) -> Self {
         let bytevec = m.borrow_mut().new_bytevec(bytevec);
@@ -92,6 +105,8 @@ impl<'a> Value<'a> {
     }
 
     /// Creates a new vector.
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_vector(m: MutatorRef<'a>, vector: impl Into<Vec<Value<'a>>>) -> Self {
         let vector = m.borrow_mut().new_vector(vector);
@@ -99,12 +114,16 @@ impl<'a> Value<'a> {
     }
 
     /// Creates a new pair. This is equivalent to [`Value::new_cons()`].
+    #[allow(clippy::similar_names, clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_pair(m: MutatorRef<'a>, car: Value<'a>, cdr: Value<'a>) -> Self {
         Self::new_cons(m, car, cdr)
     }
 
     /// Creates a new cons cell.
+    #[allow(clippy::similar_names, clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_cons(m: MutatorRef<'a>, car: Value<'a>, cdr: Value<'a>) -> Self {
         let pair = m.borrow_mut().new_pair(car, cdr);
@@ -113,7 +132,7 @@ impl<'a> Value<'a> {
 
     /// Creates a new proper list from an iterator of values. It takes ownership
     /// of the values and stores them in the list.
-    /// 
+    ///
     /// An empty iterator returns the empty list `nil`.
     ///
     /// # Example
@@ -133,6 +152,8 @@ impl<'a> Value<'a> {
     /// assert_eq!(print(list1).to_string(), "(1 2 3)");
     /// assert_eq!(print(list2).to_string(), "(1 2 3)");
     /// ```
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_list(m: MutatorRef<'a>, list: impl IntoIterator<Item = Value<'a>>) -> Self {
         Self::new_dotlist_map(m, list, None, |v| v)
@@ -144,7 +165,7 @@ impl<'a> Value<'a> {
     /// convert the values into `Value<'a>`.
     ///
     /// An empty iterator returns the empty list `nil`.
-    /// 
+    ///
     /// # Example
     ///
     /// ```rust
@@ -162,6 +183,8 @@ impl<'a> Value<'a> {
     /// assert_eq!(print(list1).to_string(), "(1 2 3)");
     /// assert_eq!(print(list2).to_string(), "(1 2 3)");
     /// ```
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_list_map<T, F>(m: MutatorRef<'a>, list: impl IntoIterator<Item = T>, f: F) -> Self
     where
@@ -177,16 +200,16 @@ impl<'a> Value<'a> {
     /// identity function as the last argument.
     ///
     /// An empty iterator returns the empty list `nil`.
-    /// 
+    ///
     /// An alternative end of list may be set to a value other than `nil` by
     /// passing it as the second optional argument. If this argument is `None`
     /// or `Some(nil)`, the end of list is set to `nil`.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the iterator is empty and the alternative end of list is
     /// neither `None` nor `Some(nil)`.
-    /// 
+    ///
     /// # Example
     ///
     /// ```rust
@@ -215,6 +238,8 @@ impl<'a> Value<'a> {
     /// assert_eq!(print(dotlist1).to_string(), "(1 2 3 . 4)");
     /// assert_eq!(print(dotlist2).to_string(), "(1 2 3 . 4)");
     /// ```
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
     #[inline]
     pub fn new_dotlist(
         m: MutatorRef<'a>,
@@ -230,13 +255,13 @@ impl<'a> Value<'a> {
     /// convert the values into `Value<'a>`.
     ///
     /// An empty iterator returns the empty list `nil`.
-    /// 
+    ///
     /// An alternative end of list may be set to a value other than `nil` by
     /// passing it as the second optional argument. If this argument is `None`
     /// or `Some(nil)`, the end of list is set to `nil`.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the iterator is empty and the alternative end of list is
     /// neither `None` nor `Some(nil)`.
     ///
@@ -268,6 +293,8 @@ impl<'a> Value<'a> {
     /// assert_eq!(print(dotlist1).to_string(), "(1 2 3 . 4)");
     /// assert_eq!(print(dotlist2).to_string(), "(1 2 3 . 4)");
     /// ```
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
     pub fn new_dotlist_map<T, F>(
         m: MutatorRef<'a>,
         list: impl IntoIterator<Item = T>,
@@ -278,16 +305,16 @@ impl<'a> Value<'a> {
         F: FnMut(T) -> Value<'a>,
     {
         let mut list = list.into_iter();
-        let eol = eol.map(&mut f).unwrap_or(Value::new_nil());
+        let eol = eol.map_or(Value::new_nil(), &mut f);
 
         if let Some(car) = list.next() {
             let mut m = m.borrow_mut();
             let head = m.new_pair(f(car), Value::new_nil());
-            let mut tail = head.to_owned();
+            let mut tail = head.clone();
 
             for car in list {
                 let cdr = m.new_pair(f(car), Value::new_nil());
-                tail.set_cdr(cdr.to_owned().into());
+                tail.set_cdr(cdr.clone().into());
                 tail = cdr;
             }
             tail.set_cdr(eol);
@@ -304,6 +331,7 @@ impl<'a> Value<'a> {
 
     /// If the value is `nil` or the empty list, returns `Some(())`. Otherwise,
     /// returns `None`.
+    #[must_use]
     #[inline]
     pub const fn as_nil(&self) -> Option<()> {
         match self.inner {
@@ -314,6 +342,7 @@ impl<'a> Value<'a> {
 
     /// If the value is a boolean, returns it as a `bool`. Otherwise, returns
     /// `None`.
+    #[must_use]
     #[inline]
     pub const fn as_bool(&self) -> Option<bool> {
         match self.inner {
@@ -324,6 +353,7 @@ impl<'a> Value<'a> {
 
     /// If the value is a character, returns it as a `char`. Otherwise, returns
     /// `None`.
+    #[must_use]
     #[inline]
     pub const fn as_char(&self) -> Option<char> {
         match self.inner {
@@ -334,6 +364,7 @@ impl<'a> Value<'a> {
 
     /// If the value is an integer, returns it as an `i64`. Otherwise, returns
     /// `None`.
+    #[must_use]
     #[inline]
     pub const fn as_int(&self) -> Option<i64> {
         match self.inner {
@@ -344,6 +375,7 @@ impl<'a> Value<'a> {
 
     /// If the value is a float, returns it as an `f64`. Otherwise, returns
     /// `None`.
+    #[must_use]
     #[inline]
     pub const fn as_float(&self) -> Option<f64> {
         match self.inner {
@@ -354,8 +386,9 @@ impl<'a> Value<'a> {
 
     /// If the value is a pair, returns it as a [`Pair`]. Otherwise, returns
     /// `None`.
+    #[must_use]
     #[inline]
-    pub fn as_pair(&self) -> Option<&Pair<'a>> {
+    pub const fn as_pair(&self) -> Option<&Pair<'a>> {
         match self.inner {
             ValueKind::Pair(_, ptr) => unsafe { ptr.as_ref() }.value(),
             _ => None,
@@ -364,6 +397,7 @@ impl<'a> Value<'a> {
 
     /// If the value is a pair, returns it as a mutable [`Pair`]. Otherwise,
     /// returns `None`.
+    #[must_use]
     #[inline]
     pub fn as_pair_mut(&mut self) -> Option<&mut Pair<'a>> {
         match self.inner {
@@ -374,6 +408,7 @@ impl<'a> Value<'a> {
 
     /// If the value is a pair, returns it as a `Pointer<'a, Pair<'a>>`.
     /// Otherwise, returns `None`.
+    #[must_use]
     pub fn as_pair_ptr(&self) -> Option<Pointer<'a, Pair<'a>>> {
         match self.inner {
             ValueKind::Pair(_, ptr) => Some(ptr.into()),
@@ -383,8 +418,9 @@ impl<'a> Value<'a> {
 
     /// If the value is a string, returns it as a [`SmartString`]. Otherwise,
     /// returns `None`.
+    #[must_use]
     #[inline]
-    pub fn as_string(&self) -> Option<&SmartString> {
+    pub const fn as_string(&self) -> Option<&SmartString> {
         match self.inner {
             ValueKind::String(_, ptr) => unsafe { ptr.as_ref() }.value(),
             _ => None,
@@ -393,6 +429,7 @@ impl<'a> Value<'a> {
 
     /// If the value is a string, returns it as a mutable [`SmartString`].
     /// Otherwise, returns `None`.
+    #[must_use]
     #[inline]
     pub fn as_string_mut(&mut self) -> Option<&mut SmartString> {
         match self.inner {
@@ -403,6 +440,7 @@ impl<'a> Value<'a> {
 
     /// If the value is a string, returns it as a `Pointer<'a, SmartString>`.
     /// Otherwise, returns `None`.
+    #[must_use]
     pub fn as_string_ptr(&self) -> Option<Pointer<'a, SmartString>> {
         match self.inner {
             ValueKind::String(_, ptr) => Some(ptr.into()),
@@ -412,16 +450,19 @@ impl<'a> Value<'a> {
 
     /// If the value is a symbol, returns it as a `&str`. Otherwise, returns
     /// `None`.
+    #[must_use]
     #[inline]
     pub fn as_symbol(&self) -> Option<&str> {
         match self.inner {
-            ValueKind::Symbol(_, ptr) => unsafe { ptr.as_ref() }.value().map(|e| e.as_ref()),
+            ValueKind::Symbol(_, ptr) => unsafe { ptr.as_ref() }.value().map(AsRef::as_ref),
             _ => None,
         }
     }
 
     /// If the value is a symbol, returns it as a `Pointer<'a, Box<str>>`.
     /// Otherwise, returns `None`.
+    #[must_use]
+    #[inline]
     pub fn as_symbol_ptr(&self) -> Option<Pointer<'a, Box<str>>> {
         match self.inner {
             ValueKind::Symbol(_, ptr) => Some(ptr.into()),
@@ -431,16 +472,18 @@ impl<'a> Value<'a> {
 
     /// If the value is a byte-vector, returns it as a `&[u8]`. Otherwise,
     /// returns `None`.
+    #[must_use]
     #[inline]
     pub fn as_bytevec(&self) -> Option<&[u8]> {
         match self.inner {
-            ValueKind::Bytevec(_, ptr) => unsafe { ptr.as_ref() }.value().map(|e| e.as_slice()),
+            ValueKind::Bytevec(_, ptr) => unsafe { ptr.as_ref() }.value().map(SmallVec::as_slice),
             _ => None,
         }
     }
 
     /// If the value is a byte-vector, returns it as a mutable
     /// `&mut ByteVector`. Otherwise, returns `None`.
+    #[must_use]
     #[inline]
     pub fn as_bytevec_mut(&mut self) -> Option<&mut ByteVector> {
         match self.inner {
@@ -451,6 +494,8 @@ impl<'a> Value<'a> {
 
     /// If the value is a byte-vector, returns it as a
     /// `Pointer<'a, ByteVector>`. Otherwise, returns `None`.
+    #[must_use]
+    #[inline]
     pub fn as_bytevec_ptr(&self) -> Option<Pointer<'a, ByteVector>> {
         match self.inner {
             ValueKind::Bytevec(_, ptr) => Some(ptr.into()),
@@ -460,8 +505,9 @@ impl<'a> Value<'a> {
 
     /// If the value is a vector, returns it as a [`Vector`]. Otherwise, returns
     /// `None`.
+    #[must_use]
     #[inline]
-    pub fn as_vector(&self) -> Option<&Vector<'a>> {
+    pub const fn as_vector(&self) -> Option<&Vector<'a>> {
         match self.inner {
             ValueKind::Vector(_, ptr) => unsafe { ptr.as_ref() }.value(),
             _ => None,
@@ -470,6 +516,7 @@ impl<'a> Value<'a> {
 
     /// If the value is a vector, returns it as a mutable [`Vector`]. Otherwise,
     /// returns `None`.
+    #[must_use]
     #[inline]
     pub fn as_vector_mut(&mut self) -> Option<&mut Vector<'a>> {
         match self.inner {
@@ -480,6 +527,8 @@ impl<'a> Value<'a> {
 
     /// If the value is a vector, returns it as a `Pointer<'a, Vector<'a>>`.
     /// Otherwise, returns `None`.
+    #[must_use]
+    #[inline]
     pub fn as_vector_ptr(&self) -> Option<Pointer<'a, Vector<'a>>> {
         match self.inner {
             ValueKind::Vector(_, ptr) => Some(ptr.into()),
@@ -488,8 +537,9 @@ impl<'a> Value<'a> {
     }
 
     /// Returns the inner value.
+    #[must_use]
     #[inline]
-    pub fn kind(&self) -> &ValueKind<'a> {
+    pub const fn kind(&self) -> &ValueKind<'a> {
         &self.inner
     }
 
@@ -498,84 +548,98 @@ impl<'a> Value<'a> {
     /* #region Predicates */
 
     /// Returns `true` if the value is `nil`.
+    #[must_use]
     #[inline]
     pub const fn is_nil(&self) -> bool {
         matches!(self.inner, ValueKind::Nil)
     }
 
     /// Returns `true` if the value is `true`.
+    #[must_use]
     #[inline]
     pub const fn is_true(&self) -> bool {
         matches!(self.inner, ValueKind::Bool(true))
     }
 
     /// Returns `true` if the value is `false` or `nil`.
+    #[must_use]
     #[inline]
     pub const fn is_false(&self) -> bool {
         matches!(self.inner, ValueKind::Bool(false) | ValueKind::Nil)
     }
 
     /// Returns `true` if the value is a boolean.
+    #[must_use]
     #[inline]
     pub const fn is_bool(&self) -> bool {
         matches!(self.inner, ValueKind::Bool(_))
     }
 
     /// Returns `true` if the value is a character.
+    #[must_use]
     #[inline]
     pub const fn is_char(&self) -> bool {
         matches!(self.inner, ValueKind::Char(_))
     }
 
     /// Returns `true` if the value is an integer.
+    #[must_use]
     #[inline]
     pub const fn is_int(&self) -> bool {
         matches!(self.inner, ValueKind::Integer(_))
     }
 
     /// Returns `true` if the value is a float.
+    #[must_use]
     #[inline]
     pub const fn is_float(&self) -> bool {
         matches!(self.inner, ValueKind::Float(_))
     }
 
     /// Returns `true` if the value is a number.
+    #[must_use]
     #[inline]
     pub const fn is_number(&self) -> bool {
         self.is_int() || self.is_float()
     }
 
     /// Returns `true` if the value is a pair.
+    #[must_use]
     #[inline]
     pub const fn is_pair(&self) -> bool {
         matches!(self.inner, ValueKind::Pair(_, _))
     }
 
     /// Returns `true` if the value is a string.
+    #[must_use]
     #[inline]
     pub const fn is_string(&self) -> bool {
         matches!(self.inner, ValueKind::String(_, _))
     }
 
     /// Returns `true` if the value is a symbol.
+    #[must_use]
     #[inline]
     pub const fn is_symbol(&self) -> bool {
         matches!(self.inner, ValueKind::Symbol(_, _))
     }
 
     /// Returns `true` if the value is a byte-vector.
+    #[must_use]
     #[inline]
     pub const fn is_bytevec(&self) -> bool {
         matches!(self.inner, ValueKind::Bytevec(_, _))
     }
 
     /// Returns `true` if the value is a vector.
+    #[must_use]
     #[inline]
     pub const fn is_vector(&self) -> bool {
         matches!(self.inner, ValueKind::Vector(_, _))
     }
 
     /// Returns `true` if the value is an atom, or rather not a pair.
+    #[must_use]
     #[inline]
     pub const fn is_atom(&self) -> bool {
         !(self.is_pair() || self.is_nil())
@@ -583,6 +647,7 @@ impl<'a> Value<'a> {
 
     /// Returns `true` if the value is evaluating, or rather not an atom.
     /// Evaluating values are pairs, symbols, and `nil`.
+    #[must_use]
     #[inline]
     pub const fn is_evaluating(&self) -> bool {
         self.is_symbol() || self.is_pair() || self.is_nil()
@@ -590,26 +655,24 @@ impl<'a> Value<'a> {
 
     /// Returns `true` if the value is a proper list. Returns `false` if the
     /// value is not a proper list or if the list is circular.
+    #[must_use]
     #[inline]
     pub fn is_list(&self) -> bool {
-        if let Some(pair) = self.as_pair() {
-            pair.is_list()
-        } else {
-            false
-        }
+        self.as_pair().map_or(false, Pair::is_list)
     }
 
     /// Returns `Some(true)` if the value is an empty list, [`Vector`], string,
     /// symbol, or byte-vector. Returns Some(`false`) if the value is not empty
     /// and `None` otherwise.
+    #[must_use]
     pub fn is_empty(&self) -> Option<bool> {
         match self.inner {
             ValueKind::Nil => Some(true),
-            ValueKind::Pair(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.is_empty()),
-            ValueKind::Vector(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.is_empty()),
-            ValueKind::String(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.is_empty()),
+            ValueKind::Pair(_, ptr) => unsafe { ptr.as_ref() }.value().map(Pair::is_empty),
+            ValueKind::Vector(_, ptr) => unsafe { ptr.as_ref() }.value().map(Vector::is_empty),
+            ValueKind::String(_, ptr) => unsafe { ptr.as_ref() }.value().map(SmartString::is_empty),
             ValueKind::Symbol(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.is_empty()),
-            ValueKind::Bytevec(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.is_empty()),
+            ValueKind::Bytevec(_, ptr) => unsafe { ptr.as_ref() }.value().map(SmallVec::is_empty),
             _ => None,
         }
     }
@@ -619,13 +682,15 @@ impl<'a> Value<'a> {
     /* #region Properties */
 
     /// Returns the id of the value.
+    #[must_use]
     #[inline]
     pub fn id(&self) -> ValueId {
         self.into()
     }
 
     /// Returns the tag of the value.
-    pub fn tag(&self) -> ValueTag {
+    #[must_use]
+    pub const fn tag(&self) -> ValueTag {
         match self.inner {
             ValueKind::Nil => ValueTag::Nil,
             ValueKind::Bool(_) => ValueTag::Bool,
@@ -647,14 +712,15 @@ impl<'a> Value<'a> {
     /// byte-vectors. `nil` has a length of `0`. Calculating the length of a
     /// list is linear to the length of the list. Circular lists are calculated
     /// correctly.
+    #[must_use]
     pub fn len(&self) -> Option<usize> {
         match self.inner {
             ValueKind::Nil => Some(0),
-            ValueKind::Pair(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.len()),
-            ValueKind::Vector(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.len()),
-            ValueKind::String(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.len()),
+            ValueKind::Pair(_, ptr) => unsafe { ptr.as_ref() }.value().map(Pair::len),
+            ValueKind::Vector(_, ptr) => unsafe { ptr.as_ref() }.value().map(Vector::len),
+            ValueKind::String(_, ptr) => unsafe { ptr.as_ref() }.value().map(SmartString::len),
             ValueKind::Symbol(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.len()),
-            ValueKind::Bytevec(_, ptr) => unsafe { ptr.as_ref() }.value().map(|v| v.len()),
+            ValueKind::Bytevec(_, ptr) => unsafe { ptr.as_ref() }.value().map(SmallVec::len),
             _ => None,
         }
     }
@@ -664,6 +730,12 @@ impl<'a> Value<'a> {
     /* #region Visitors */
 
     /// Accepts a visitor and calls the appropriate method.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the value is a pair, string, symbol, byte-vector, vector, type,
+    /// or procedure and the pointer is invalid. This is a bug and should be
+    /// reported.
     pub fn accept<V>(&self, visitor: &mut V) -> V::Result
     where
         V: Visitor,
@@ -850,7 +922,7 @@ impl<'a> From<Pointer<'a, Box<str>>> for Value<'a> {
 
 impl<'a> Drop for Value<'a> {
     fn drop(&mut self) {
-        self.unlock()
+        self.unlock();
     }
 }
 
@@ -875,38 +947,38 @@ impl<'a> ToRoot<'a> for Value<'a> {
             | ValueKind::Integer(_)
             | ValueKind::Float(_) => None,
             ValueKind::String(locked, ptr) => {
-                if !*locked {
-                    Some(Root::String(*ptr))
-                } else {
+                if *locked {
                     None
+                } else {
+                    Some(Root::String(*ptr))
                 }
             }
             ValueKind::Symbol(locked, ptr) => {
-                if !*locked {
-                    Some(Root::Symbol(*ptr))
-                } else {
+                if *locked {
                     None
+                } else {
+                    Some(Root::Symbol(*ptr))
                 }
             }
             ValueKind::Bytevec(locked, ptr) => {
-                if !*locked {
-                    Some(Root::Bytevec(*ptr))
-                } else {
+                if *locked {
                     None
+                } else {
+                    Some(Root::Bytevec(*ptr))
                 }
             }
             ValueKind::Pair(locked, ptr) => {
-                if !*locked {
-                    Some(Root::Pair(*ptr))
-                } else {
+                if *locked {
                     None
+                } else {
+                    Some(Root::Pair(*ptr))
                 }
             }
             ValueKind::Vector(locked, ptr) => {
-                if !*locked {
-                    Some(Root::Vector(*ptr))
-                } else {
+                if *locked {
                     None
+                } else {
+                    Some(Root::Vector(*ptr))
                 }
             }
         }

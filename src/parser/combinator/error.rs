@@ -1,6 +1,7 @@
 use std::fmt;
 
 /// Definition of the error messages of the combinator parsers.
+#[allow(clippy::module_name_repetitions)]
 pub enum CombinatorError {
     /// Indicates that the end of input was expected.
     Eof,

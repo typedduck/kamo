@@ -1,7 +1,9 @@
-use crate::parser::{character::CharacterError, code, prelude::ascii, ParseError, Input, ParseResult};
+use crate::parser::{
+    character::CharacterError, code, prelude::ascii, Input, ParseError, ParseResult,
+};
 
 /// This helper enum represents the radix of a number literal.
-/// 
+///
 /// The radix is the base of the number literal. For example, the number literal
 /// `0b1010` has a radix of `2`. The number literal `0x1F` has a radix of `16`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -18,7 +20,8 @@ pub enum Radix {
 
 impl Radix {
     /// Returns the base of the radix as a `u32`.
-    pub fn base(&self) -> u32 {
+    #[must_use]
+    pub const fn base(&self) -> u32 {
         match self {
             Self::Binary => 2,
             Self::Octal => 8,

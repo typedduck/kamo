@@ -29,7 +29,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// ilws          = [ \t]* ("\n" | "\r\n") [ \t]*
     /// ```
     pub fn string(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> + '_ {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         move |input| {
             delimited(char('"'), Self::string_text, char('"'))(input)
@@ -39,10 +39,10 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
                     match err.code() {
                         code::ERR_PRECEDED => {
-                            err.push(span, ERR_STRING_LITERAL + ECO, SexprError::StringLiteral)
+                            err.push(span, ERR_STRING_LITERAL + ECO, SexprError::StringLiteral);
                         }
                         code::ERR_TERMINATED => {
-                            err.push(span, ERR_STRING_CLOSING + ECO, SexprError::StringClosing)
+                            err.push(span, ERR_STRING_CLOSING + ECO, SexprError::StringClosing);
                         }
                         _ => (),
                     }
@@ -147,24 +147,24 @@ mod tests {
     use super::*;
 
     const ESCAPES: &[(&str, &str, Fragment)] = &[
-        (r#"\a"#, "", Fragment::Escape('\x07')),
-        (r#"\b"#, "", Fragment::Escape('\x08')),
-        (r#"\t"#, "", Fragment::Escape('\t')),
-        (r#"\n"#, "", Fragment::Escape('\n')),
-        (r#"\r"#, "", Fragment::Escape('\r')),
-        (r#"\\"#, "", Fragment::Escape('\\')),
+        (r"\a", "", Fragment::Escape('\x07')),
+        (r"\b", "", Fragment::Escape('\x08')),
+        (r"\t", "", Fragment::Escape('\t')),
+        (r"\n", "", Fragment::Escape('\n')),
+        (r"\r", "", Fragment::Escape('\r')),
+        (r"\\", "", Fragment::Escape('\\')),
         (r#"\""#, "", Fragment::Escape('"')),
-        (r#"\x20;"#, "", Fragment::Escape(' ')),
+        (r"\x20;", "", Fragment::Escape(' ')),
         ("\\\n    ", "", Fragment::Ilws),
         ("\\\r\n    ", "", Fragment::Ilws),
-        (r#"\a "#, " ", Fragment::Escape('\x07')),
-        (r#"\b "#, " ", Fragment::Escape('\x08')),
-        (r#"\t "#, " ", Fragment::Escape('\t')),
-        (r#"\n "#, " ", Fragment::Escape('\n')),
-        (r#"\r "#, " ", Fragment::Escape('\r')),
-        (r#"\\ "#, " ", Fragment::Escape('\\')),
+        (r"\a ", " ", Fragment::Escape('\x07')),
+        (r"\b ", " ", Fragment::Escape('\x08')),
+        (r"\t ", " ", Fragment::Escape('\t')),
+        (r"\n ", " ", Fragment::Escape('\n')),
+        (r"\r ", " ", Fragment::Escape('\r')),
+        (r"\\ ", " ", Fragment::Escape('\\')),
         (r#"\" "#, " ", Fragment::Escape('"')),
-        (r#"\x20; "#, " ", Fragment::Escape(' ')),
+        (r"\x20; ", " ", Fragment::Escape(' ')),
         ("\\    \n    ", "", Fragment::Ilws),
         ("\\    \r\n    ", "", Fragment::Ilws),
     ];
@@ -185,7 +185,7 @@ mod tests {
     fn string_escape_failure() {
         let parse = Sexpr::<0>::string_escape;
 
-        let input = Input::new(r#"\x20"#);
+        let input = Input::new(r"\x20");
         let expected = Err(ParseError::new(
             Span::new(Position::new(2, 1, 3), Position::new(4, 1, 5)),
             ERR_STRING_CODE,
@@ -194,7 +194,7 @@ mod tests {
 
         assert_eq!(parse(input), expected);
 
-        let input = Input::new(r#"\xg;"#);
+        let input = Input::new(r"\xg;");
         let expected = Err(ParseError::new(
             Position::new(2, 1, 3),
             ERR_STRING_CODE,
@@ -203,7 +203,7 @@ mod tests {
 
         assert_eq!(parse(input), expected);
 
-        let input = Input::new(r#"\g"#);
+        let input = Input::new(r"\g");
         let expected = Err(ParseError::new(
             Span::new(Position::new(0, 1, 1), Position::new(1, 1, 2)),
             ERR_STRING_ESCAPE,
@@ -230,7 +230,7 @@ mod tests {
     #[test]
     fn string_success() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned());
+        let sexpr = Sexpr::<0>::new(m.clone());
         let parse = sexpr.string();
 
         for (i, (input, rest, expected)) in STRINGS.iter().enumerate() {
@@ -284,7 +284,7 @@ mod tests {
 
         assert_eq!(parse(input), expected);
 
-        let input = Input::new(r#"abc"#);
+        let input = Input::new(r"abc");
         let expected = Err(ParseError::new(
             Position::new(0, 1, 1),
             ERR_STRING_LITERAL,

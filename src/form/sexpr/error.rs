@@ -1,6 +1,7 @@
 use std::{error::Error, fmt, path::Path};
 
 /// Definition of the error messages for the S-expression parser.
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum SexprError<'a> {
     /// Expecting a binary integer.

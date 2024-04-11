@@ -50,93 +50,111 @@ impl<'a> Pair<'a> {
     }
 
     /// Returns the next value in the list.
+    #[must_use]
     pub fn next(&self) -> Next<'a> {
-        if let Some(pair) = self.tail.as_pair_ptr() {
-            Next::Pair(pair)
-        } else if self.tail.is_nil() {
-            Next::Nil
-        } else {
-            Next::Dot(self.tail.clone())
-        }
+        self.tail.as_pair_ptr().map_or_else(
+            || {
+                if self.tail.is_nil() {
+                    Next::Nil
+                } else {
+                    Next::Dot(self.tail.clone())
+                }
+            },
+            Next::Pair,
+        )
     }
 
     /// Returns a reference to the head of the pair.
+    #[must_use]
     #[inline]
     pub const fn car(&self) -> &Value<'a> {
         &self.head
     }
 
     /// Returns a reference to the tail of the pair.
+    #[must_use]
     #[inline]
     pub const fn cdr(&self) -> &Value<'a> {
         &self.tail
     }
 
     /// Returns: `(car (car <self>))`
+    #[must_use]
     #[inline]
     pub fn caar(&self) -> Option<Value<'a>> {
         self.car().as_pair().map(|pair| pair.car().clone())
     }
 
     /// Returns: `(cdr (car <self>))`
+    #[must_use]
     #[inline]
     pub fn cadr(&self) -> Option<Value<'a>> {
         self.cdr().as_pair().map(|pair| pair.car().clone())
     }
 
     /// Returns: `(car (cdr <self>))`
+    #[must_use]
     pub fn cdar(&self) -> Option<Value<'a>> {
         self.car().as_pair().map(|pair| pair.cdr().clone())
     }
 
     /// Returns: `(cdr (cdr <self>))`
+    #[must_use]
     pub fn cddr(&self) -> Option<Value<'a>> {
         self.cdr().as_pair().map(|pair| pair.cdr().clone())
     }
 
     /// Returns: `(car (car (car <self>)))`
+    #[must_use]
     pub fn caaar(&self) -> Option<Value<'a>> {
         self.caar()
             .and_then(|value| value.as_pair().map(|pair| pair.car().clone()))
     }
 
     /// Returns: `(cdr (car (car <self>)))`
+    #[must_use]
     pub fn caadr(&self) -> Option<Value<'a>> {
         self.cadr()
             .and_then(|value| value.as_pair().map(|pair| pair.car().clone()))
     }
 
     /// Returns: `(car (cdr (car <self>)))`
+    #[must_use]
     pub fn cadar(&self) -> Option<Value<'a>> {
         self.cdar()
             .and_then(|value| value.as_pair().map(|pair| pair.car().clone()))
     }
 
     /// Returns: `(cdr (cdr (car <self>)))`
+    #[must_use]
     pub fn caddr(&self) -> Option<Value<'a>> {
         self.cddr()
             .and_then(|value| value.as_pair().map(|pair| pair.car().clone()))
     }
 
     /// Returns: `(car (car (cdr <self>)))`
+    #[must_use]
     pub fn cdaar(&self) -> Option<Value<'a>> {
         self.caar()
             .and_then(|value| value.as_pair().map(|pair| pair.cdr().clone()))
     }
 
     /// Returns: `(cdr (car (cdr <self>)))`
+    #[must_use]
     pub fn cdadr(&self) -> Option<Value<'a>> {
         self.cadr()
             .and_then(|value| value.as_pair().map(|pair| pair.cdr().clone()))
     }
 
     /// Returns: `(car (cdr (cdr <self>)))`
+    #[must_use]
     pub fn cddar(&self) -> Option<Value<'a>> {
         self.cdar()
             .and_then(|value| value.as_pair().map(|pair| pair.cdr().clone()))
     }
 
     /// Returns: `(cdr (cdr (cdr <self>)))`
+    #[must_use]
     pub fn cdddr(&self) -> Option<Value<'a>> {
         self.cddr()
             .and_then(|value| value.as_pair().map(|pair| pair.cdr().clone()))
@@ -164,6 +182,7 @@ impl<'a> Pair<'a> {
 
     /// Returns `true` if the pair is a proper list. Returns `false` if the pair
     /// is not a proper list or if the list is circular.
+    #[must_use]
     pub fn is_list(&self) -> bool {
         let mut seen = HashSet::new();
         let mut tail = &self.tail;
@@ -174,15 +193,15 @@ impl<'a> Pair<'a> {
 
             if seen.contains(&pair_ptr) {
                 return false;
-            } else {
-                seen.insert(pair_ptr);
             }
+            seen.insert(pair_ptr);
             tail = &pair.tail;
         }
         tail.is_nil()
     }
 
     /// Returns the length of the list. Circular lists are handled correctly.
+    #[must_use]
     pub fn len(&self) -> usize {
         let mut len = 1;
         let mut seen = HashSet::new();
@@ -194,9 +213,8 @@ impl<'a> Pair<'a> {
 
             if seen.contains(&pair_ptr) {
                 return len;
-            } else {
-                seen.insert(pair_ptr);
             }
+            seen.insert(pair_ptr);
             len += 1;
             tail = &pair.tail;
         }
@@ -204,8 +222,9 @@ impl<'a> Pair<'a> {
     }
 
     /// Returns always `false` because a pair is never empty.
+    #[must_use]
     #[inline]
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         false
     }
 }
@@ -224,13 +243,13 @@ impl<'a> Trace<'a> for Pair<'a> {
 impl<'a> PartialEq for Pair<'a> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        let lhs = self as *const _ as *const u8;
-        let rhs = other as *const _ as *const u8;
+        let lhs = (self as *const Self).cast::<u8>();
+        let rhs = (other as *const Self).cast::<u8>();
 
-        if !std::ptr::eq(lhs, rhs) {
-            self.head == other.head && self.tail == other.tail
-        } else {
+        if std::ptr::eq(lhs, rhs) {
             true
+        } else {
+            self.head == other.head && self.tail == other.tail
         }
     }
 }

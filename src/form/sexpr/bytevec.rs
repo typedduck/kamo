@@ -18,7 +18,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// byte    = <any extact number between 0 and 255>
     /// ```
     pub fn bytevec(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         move |input| {
             map(
@@ -34,7 +34,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
                 match err.code() {
                     code::ERR_TERMINATED => {
-                        err.push(span, ERR_BYTEVEC_CLOSING + ECO, SexprError::BytevecClosing)
+                        err.push(span, ERR_BYTEVEC_CLOSING + ECO, SexprError::BytevecClosing);
                     }
                     code if code == ERR_BYTEVEC_BYTE + ECO => (),
                     _ => err.push(span, ERR_BYTEVEC_LITERAL + ECO, SexprError::BytevecLiteral),
@@ -51,6 +51,8 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
                 if let Some(value) = value {
                     if (0..=255).contains(&value) {
+                        // Type cast is safe because the value is between 0 and 255.
+                        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
                         return Ok((value as u8, cursor));
                     }
                 }
@@ -120,7 +122,7 @@ mod tests {
     #[test]
     fn bytevec_success() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned());
+        let sexpr = Sexpr::<0>::new(m.clone());
 
         for (i, (input, rest, expected)) in BYTEVECS.iter().enumerate() {
             let input = Input::new(input);

@@ -19,8 +19,9 @@ use super::{Pair, Value, Vector, Visitor};
 ///
 /// assert_eq!(printer.to_string(), "42");
 /// ```
+#[must_use]
 #[inline]
-pub fn print(value: Value<'_>) -> SimplePrinter<'_> {
+pub const fn print(value: Value<'_>) -> SimplePrinter<'_> {
     SimplePrinter(value)
 }
 
@@ -148,26 +149,30 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
                 ' ' => write!(self.0, "space"),
                 '\t' => write!(self.0, "tab"),
                 value if value.is_ascii_control() => write!(self.0, "x{:02x}", value as u32),
-                value => write!(self.0, "{}", value),
+                value => write!(self.0, "{value}"),
             }
         } else if is_xid_start(value) || is_xid_continue(value) {
-            write!(self.0, "{}", value)
+            write!(self.0, "{value}")
         } else {
             write!(self.0, "u{{{:x}}}", value as u32)
         }
     }
 
     fn visit_integer(&mut self, value: i64) -> Self::Result {
-        write!(self.0, "{}", value)
+        write!(self.0, "{value}")
     }
 
     fn visit_float(&mut self, value: f64) -> Self::Result {
         if value.is_nan() {
             write!(self.0, "+nan.0")
         } else if value.is_infinite() {
-            write!(self.0, "{}inf.0", if value.is_sign_negative() { "-" } else { "+" })
+            write!(
+                self.0,
+                "{}inf.0",
+                if value.is_sign_negative() { "-" } else { "+" }
+            )
         } else {
-            write!(self.0, "{}", value)
+            write!(self.0, "{value}")
         }
     }
 
@@ -183,9 +188,8 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
 
             if seen.contains(&ptr) {
                 return write!(self.0, " <cyclic list>)");
-            } else {
-                seen.insert(ptr);
             }
+            seen.insert(ptr);
             write!(self.0, " ")?;
             value.car().accept(self)?;
             tail = value.cdr();
@@ -198,19 +202,19 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
     }
 
     fn visit_string(&mut self, value: &str) -> Self::Result {
-        write!(self.0, "{:?}", value)
+        write!(self.0, "{value:?}")
     }
 
     fn visit_symbol(&mut self, value: &str) -> Self::Result {
-        write!(self.0, "{}", value)
+        write!(self.0, "{value}")
     }
 
     fn visit_bytevec(&mut self, value: &[u8]) -> Self::Result {
         write!(self.0, "#u8(")?;
         if let Some((first, rest)) = value.split_first() {
-            write!(self.0, "{}", first)?;
+            write!(self.0, "{first}")?;
             for byte in rest {
-                write!(self.0, " {}", byte)?;
+                write!(self.0, " {byte}")?;
             }
         }
         write!(self.0, ")")
@@ -253,6 +257,7 @@ mod tests {
 
     use super::*;
 
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn print_atoms() {
         let m = Mutator::new_ref();
@@ -283,6 +288,7 @@ mod tests {
             print(Value::new_bytevec(m.clone(), [0, 1, 2])).to_string(),
             "#u8(0 1 2)"
         );
+        assert_eq!(print(Value::new_string(m.clone(), "")).to_string(), "\"\"");
         assert_eq!(
             print(Value::new_string(m.clone(), "foo")).to_string(),
             "\"foo\""
@@ -385,6 +391,7 @@ mod tests {
         );
     }
 
+    #[allow(clippy::similar_names)]
     #[test]
     fn print_cyclic_list() {
         let m = Mutator::new_ref();
@@ -397,7 +404,7 @@ mod tests {
         last.as_pair_mut().unwrap().set_cdr(list.clone());
 
         assert_eq!(
-            print(list.to_owned()).to_string(),
+            print(list.clone()).to_string(),
             format!("(42 43 44 <cyclic list>)")
         );
         assert_eq!(

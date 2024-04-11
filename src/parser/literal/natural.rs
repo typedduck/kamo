@@ -24,6 +24,7 @@ use super::{LiteralError, Radix};
 ///
 /// R = 2 | 8 | 10 | 16
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn recognize_natural(radix: Radix) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, &'a str> {
     move |input| {
         recognize(tuple((opt(char('+')), radix.digit1())))(input).map_err(|mut err| {
@@ -89,7 +90,7 @@ mod tests {
 
     #[test]
     fn recognize_natural_success() {
-        for (value, radix) in NATURALS.iter() {
+        for (value, radix) in &NATURALS {
             let input = Input::new(value);
             let result = recognize_natural(*radix)(input);
             assert_eq!(result, Ok((*value, Input::new(""))));
@@ -98,7 +99,7 @@ mod tests {
 
     #[test]
     fn natural_success() {
-        for (value, radix) in NATURALS.iter() {
+        for (value, radix) in &NATURALS {
             let input = Input::new(value);
             let result = natural(*radix)(input);
             assert_eq!(

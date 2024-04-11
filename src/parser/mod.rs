@@ -328,6 +328,18 @@ where
     O: 'b,
 {
     /// Parses the input and returns the result.
+    ///
+    /// The input is advanced by the parser and the result is either an `Ok`
+    /// containing the output of the parser and the remaining input, or an `Err`
+    /// containing the error that occurred.
+    ///
+    /// The parser is generic over the output type.
+    ///
+    /// # Errors
+    ///
+    /// The parser can return an error if the input does not match the expected
+    /// input. The error contains the position of the error and a code of the
+    /// error that occurred. The error code is defined in the [`code`] module.
     fn parse(&mut self, input: Input<'a>) -> ParseResult<'a, O>;
 }
 
@@ -399,13 +411,16 @@ mod tests {
 
         match result {
             Ok((value, cursor)) => {
-                if value > u8::MAX as u64 {
+                if value > u64::from(u8::MAX) {
                     Err(ParseError::new(
                         Span::new(input.position(), cursor.position()),
                         code::ERR_CUSTOM + 3,
                         "expecting a byte value: 0..255",
                     ))
                 } else {
+                    // The value is safe to cast to u8, because it is checked
+                    // that it is in the range 0..255.
+                    #[allow(clippy::cast_possible_truncation)]
                     Ok((value as u8, cursor))
                 }
             }

@@ -13,9 +13,9 @@ use super::CharacterError;
 ///
 /// assert_eq!(parser.parse("abc".into()), Ok(("abc", "".into())));
 /// assert_eq!(parser.parse("abcd".into()), Ok(("abc", "d".into())));
-/// 
+///
 /// let error = parser.parse("ab".into()).expect_err("error output");
-/// 
+///
 /// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(2, 1, 3),
@@ -48,6 +48,10 @@ pub fn take(n: usize) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str> + Co
 /// The predicate is a closure or function that takes a character and returns a
 /// boolean.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Example
 ///
 /// ```rust
@@ -58,6 +62,7 @@ pub fn take(n: usize) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str> + Co
 /// assert_eq!(parser.parse("abc".into()), Ok(("", "abc".into())));
 /// assert_eq!(parser.parse("".into()), Ok(("", "".into())));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn take_while0<P>(cond: P) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str> + Copy
 where
     P: Fn(char) -> bool + Copy,
@@ -76,6 +81,14 @@ where
 /// The predicate is a closure or function that takes a character and returns a
 /// boolean.
 ///
+/// # Errors
+///
+/// This function returns an error if the predicate returns `false` for the
+/// first character or if the end of file is reached. It returns a
+/// [`ParseError`] with the error code
+/// [`ERR_TAKE_WHILE_1`](code::ERR_TAKE_WHILE_1) and the error variant
+/// [`CharacterError::TakeWhile1`].
+///
 /// # Example
 ///
 /// ```rust
@@ -88,9 +101,9 @@ where
 ///     code::ERR_TAKE_WHILE_1,
 ///     CharacterError::TakeWhile1
 /// )));
-/// 
+///
 /// let error = parser.parse("".into()).expect_err("error output");
-/// 
+///
 /// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
@@ -98,6 +111,7 @@ where
 ///     CharacterError::TakeWhile1
 /// ));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn take_while1<P>(cond: P) -> impl for<'a> Fn(Input<'a>) -> ParseResult<&'a str>
 where
     P: Fn(char) -> bool + Copy,
@@ -134,6 +148,14 @@ where
 /// The predicate is a closure or function that takes a character and returns a
 /// boolean.
 ///
+/// # Errors
+///
+/// This function returns an error if the predicate returns `false` for the
+/// first character or if the end of file is reached before `m` characters are
+/// taken. It returns a [`ParseError`] with the error code
+/// [`ERR_TAKE_WHILE_M`](code::ERR_TAKE_WHILE_M) and the error variant
+/// [`CharacterError::TakeWhileM`].
+///
 /// # Panics
 ///
 /// Panics if `m` is greater than `n`.
@@ -155,9 +177,9 @@ where
 ///     code::ERR_TAKE_WHILE_M,
 ///     CharacterError::TakeWhileM(2)
 /// )));
-/// 
+///
 /// let error = parser.parse("".into()).expect_err("error output");
-/// 
+///
 /// assert!(error.is_eof());
 /// assert_eq!(error, ParseError::new(
 ///     Position::new(0, 1, 1),
@@ -165,6 +187,7 @@ where
 ///     CharacterError::TakeWhileM(2)
 /// ));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn take_while_m_n<P>(
     m: usize,
     n: usize,

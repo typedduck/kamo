@@ -12,6 +12,7 @@ use super::{Arena, Pointer, Root, Slot, Stats, Trace};
 /// A reference to a mutator. This is a wrapper around a reference counted
 /// reference to a mutable reference cell. This is used to make it easier to
 /// pass around mutators.
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct MutatorRef<'a>(Rc<RefCell<Mutator<'a>>>);
 
@@ -66,6 +67,13 @@ pub const MAX_ALLOCATION_PRESSURE: usize = 1024 * 1024;
 /// * [`Box<str>`](Box<str>) (symbol)
 /// * [`Vector`](Vector) (vector)
 ///
+/// The mutator can also allocate values which are used by the evaluator:
+/// * [`Activation`](Activation) (activation frame)
+/// * [`Procedure`](Procedure) (procedure)
+///
+/// In order to allocate the values for the evaluator, the `evaluate` feature
+/// must be enabled.
+///
 /// All allocations are returned as [`Pointer`](Pointer)s. A pointer is a
 /// reference to a value in the mutator. The pointer is reference counted and
 /// can be cloned. The pointer is also used to trace values during garbage
@@ -107,6 +115,7 @@ pub struct Mutator<'a> {
 
 impl<'a> Mutator<'a> {
     /// Creates a new mutator.
+    #[must_use]
     pub fn new() -> Self {
         log::debug!(target: TARGET, "Mutator: new mutator");
         let mut mutator = Self {
@@ -126,6 +135,7 @@ impl<'a> Mutator<'a> {
     }
 
     /// Creates a new mutator reference.
+    #[must_use]
     pub fn new_ref() -> MutatorRef<'a> {
         MutatorRef(Rc::new(RefCell::new(Self::new())))
     }
@@ -134,6 +144,7 @@ impl<'a> Mutator<'a> {
 
     /// Returns the number of allocated values.
     #[allow(clippy::let_and_return)]
+    #[must_use]
     pub fn len(&self) -> usize {
         let len = self.bytevecs.len()
             + self.pairs.len()
@@ -146,6 +157,7 @@ impl<'a> Mutator<'a> {
 
     /// Returns the total capacity of values that can be allocated.
     #[allow(clippy::let_and_return)]
+    #[must_use]
     pub fn capacity(&self) -> usize {
         let capacity = self.bytevecs.capacity()
             + self.pairs.capacity()
@@ -158,6 +170,7 @@ impl<'a> Mutator<'a> {
 
     /// Returns the number of values that can be allocated without reallocating.
     #[allow(clippy::let_and_return)]
+    #[must_use]
     pub fn available(&self) -> usize {
         let available = self.bytevecs.available()
             + self.pairs.available()
@@ -170,6 +183,7 @@ impl<'a> Mutator<'a> {
 
     /// Returns the current statistics of the mutator.
     #[inline]
+    #[must_use]
     pub fn stats(&self) -> Stats {
         Stats {
             allocated: self.len(),
@@ -186,6 +200,7 @@ impl<'a> Mutator<'a> {
 
     /// Returns `true` if no values have been allocated.
     #[allow(clippy::let_and_return)]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         let empty = self.bytevecs.is_empty()
             && self.pairs.is_empty()
@@ -200,6 +215,7 @@ impl<'a> Mutator<'a> {
 
     /* #region Allocation */
 
+    #[must_use]
     pub fn new_bytevec(&mut self, value: impl AsRef<[u8]>) -> Pointer<'a, ByteVector> {
         self.on_allocate();
 
@@ -209,6 +225,7 @@ impl<'a> Mutator<'a> {
         value
     }
 
+    #[must_use]
     pub fn new_pair(&mut self, head: Value<'a>, tail: Value<'a>) -> Pointer<'a, Pair<'a>> {
         self.on_allocate();
 
@@ -218,6 +235,7 @@ impl<'a> Mutator<'a> {
         value
     }
 
+    #[must_use]
     pub fn new_string(&mut self, value: impl AsRef<str>) -> Pointer<'a, SmartString> {
         self.on_allocate();
 
@@ -227,6 +245,8 @@ impl<'a> Mutator<'a> {
         value
     }
 
+    #[allow(clippy::missing_panics_doc)]
+    #[must_use]
     pub fn new_symbol(&mut self, value: impl AsRef<str>) -> Pointer<'a, Box<str>> {
         let value = value.as_ref();
 
@@ -245,7 +265,12 @@ impl<'a> Mutator<'a> {
             self.on_allocate();
 
             let value: Box<str> = value.into();
-            let key = value.deref() as *const str;
+            let key = std::ptr::addr_of!(*value);
+            // This unwrap is safe because the key is a reference to the value
+            // and the value is not null. It is a quirky way to get a reference
+            // to the value without cloning the value. The reference to the key
+            // is the same as the reference to the value. The lifetime of the
+            // reference is the same as the lifetime of the value.
             let key = unsafe { key.as_ref() }.unwrap();
             let value = self.symbols.alloc(value);
 
@@ -365,6 +390,11 @@ impl<'a> Mutator<'a> {
     ///
     /// The implemenation is a straightforward implementation of the mark and
     /// sweep algorithm.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if the value in the symbol map is not occupied.
+    /// This should never happen.
     pub fn collect_garbage(&mut self) -> usize {
         self.on_collect();
 
@@ -381,7 +411,7 @@ impl<'a> Mutator<'a> {
         self.vectors.mark(&mut pending);
 
         log::debug!(target: TARGET, "Mutator: marking pending values");
-        self.mark_pending(pending);
+        Self::mark_pending(pending);
 
         // Sweeping phase
         log::debug!(target: TARGET, "Mutator: sweeping arenas");
@@ -399,34 +429,29 @@ impl<'a> Mutator<'a> {
     }
 
     /// Mark all pending objects and their pending objects without recursion.
-    fn mark_pending(&mut self, mut pending: Vec<Root>) {
-        while !pending.is_empty() {
-            let mut next = vec![];
+    fn mark_pending(mut pending: Vec<Root>) {
+        while let Some(root) = pending.pop() {
+            match root {
+                Root::Bytevec(mut value) => unsafe { value.as_mut() }.mark(),
+                Root::String(mut value) => unsafe { value.as_mut() }.mark(),
+                Root::Symbol(mut value) => unsafe { value.as_mut() }.mark(),
+                Root::Pair(mut value) => {
+                    let entry = unsafe { value.as_mut() };
 
-            for root in pending.drain(..) {
-                match root {
-                    Root::Bytevec(mut value) => unsafe { value.as_mut() }.mark(),
-                    Root::String(mut value) => unsafe { value.as_mut() }.mark(),
-                    Root::Symbol(mut value) => unsafe { value.as_mut() }.mark(),
-                    Root::Pair(mut value) => {
-                        let entry = unsafe { value.as_mut() };
-
-                        if !entry.is_marked() {
-                            entry.mark();
-                            entry.trace(&mut next);
-                        }
+                    if !entry.is_marked() {
+                        entry.mark();
+                        entry.trace(&mut pending);
                     }
-                    Root::Vector(mut value) => {
-                        let entry = unsafe { value.as_mut() };
+                }
+                Root::Vector(mut value) => {
+                    let entry = unsafe { value.as_mut() };
 
-                        if !entry.is_marked() {
-                            entry.mark();
-                            entry.trace(&mut next);
-                        }
+                    if !entry.is_marked() {
+                        entry.mark();
+                        entry.trace(&mut pending);
                     }
                 }
             }
-            pending = next;
         }
     }
 
@@ -480,8 +505,8 @@ impl<'a> Default for Mutator<'a> {
 
 impl<'a> PartialEq for Mutator<'a> {
     fn eq(&self, other: &Self) -> bool {
-        let lhs = self as *const _ as *const u8;
-        let rhs = other as *const _ as *const u8;
+        let lhs = self as *const Self;
+        let rhs = other as *const Self;
         std::ptr::eq(lhs, rhs)
     }
 }

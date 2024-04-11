@@ -5,7 +5,7 @@ use std::{
     ptr::NonNull,
 };
 
-use crate::value::{Pair, SmartString, ValueId, Vector, ByteVector};
+use crate::value::{ByteVector, Pair, SmartString, ValueId, Vector};
 
 use super::{Mutator, Root, Slot, Trace};
 
@@ -46,7 +46,7 @@ use super::{Mutator, Root, Slot, Trace};
 /// unique. It also makes it possible to use pointers as keys in a
 /// [`HashMap`](std::collections::HashMap) or
 /// [`BTreeMap`](std::collections::BTreeMap).
-/// 
+///
 /// The lifetime `'a` is the lifetime of the [`Mutator`](crate::mem::Mutator)
 /// via the [`Arena`](crate::mem::Arena) and the [`Bucket`](crate::mem::Bucket)
 /// that the pointer was allocated in.
@@ -62,6 +62,7 @@ impl<'a, T: fmt::Debug> Pointer<'a, T> {
     /// Panics if the entry cannot be locked. This happens if the entry is
     /// unoccupied. It is the responsibility of the caller to ensure that the
     /// entry is a valid pointer and is occupied.
+    #[must_use]
     pub fn new(ptr: NonNull<Slot<T>>) -> Self {
         let mut ptr = Self(ptr, PhantomData);
 
@@ -77,7 +78,8 @@ impl<'a, T: fmt::Debug> Pointer<'a, T> {
     /// It is the responsibility of the caller to ensure that the lock on the
     /// entry is acquired prior to calling this method. The pointer must be
     /// valid and the entry must be occupied.
-    pub unsafe fn new_unchecked(ptr: NonNull<Slot<T>>) -> Self {
+    #[must_use]
+    pub const unsafe fn new_unchecked(ptr: NonNull<Slot<T>>) -> Self {
         Self(ptr, PhantomData)
     }
 
@@ -91,6 +93,7 @@ impl<'a, T: fmt::Debug> Pointer<'a, T> {
     /// the collection of the value pointed to by this pointer. The caller must
     /// ensure that the pointer is not used after this method is called until
     /// the lock is acquired again.
+    #[must_use]
     #[inline]
     pub unsafe fn into_inner(self) -> NonNull<Slot<T>> {
         self.0
@@ -103,7 +106,9 @@ impl<'a, T: fmt::Debug> Pointer<'a, T> {
     /// Does not lock the the copy of the entry pointed to. The caller must
     /// ensure that the lock is acquired. The non-null pointer is only valid as
     /// long as the `Pointer` is alive.
-    pub unsafe fn as_inner(&self) -> NonNull<Slot<T>> {
+    #[must_use]
+    #[inline]
+    pub const unsafe fn as_inner(&self) -> NonNull<Slot<T>> {
         self.0
     }
 
@@ -113,6 +118,7 @@ impl<'a, T: fmt::Debug> Pointer<'a, T> {
     ///
     /// Does not release the lock on the entry. The caller must ensure that
     /// the lock is released.
+    #[must_use]
     #[inline]
     pub unsafe fn into_raw(self) -> *mut Slot<T> {
         let ptr = self.0.as_ptr();
@@ -121,7 +127,9 @@ impl<'a, T: fmt::Debug> Pointer<'a, T> {
     }
 
     /// Returns a raw pointer to the entry.
-    pub fn as_ptr(&self) -> *const Slot<T> {
+    #[must_use]
+    #[inline]
+    pub const fn as_ptr(&self) -> *const Slot<T> {
         self.0.as_ptr()
     }
 
@@ -140,6 +148,7 @@ impl<'a, T: fmt::Debug> Pointer<'a, T> {
 
 impl<'a> Pointer<'a, Pair<'a>> {
     /// Returns the identifier of the value pointed to by this pointer.
+    #[must_use]
     #[inline]
     pub fn id(&self) -> ValueId {
         self.into()
@@ -148,6 +157,7 @@ impl<'a> Pointer<'a, Pair<'a>> {
 
 impl<'a> Pointer<'a, SmartString> {
     /// Returns the identifier of the value pointed to by this pointer.
+    #[must_use]
     #[inline]
     pub fn id(&self) -> ValueId {
         self.into()
@@ -156,6 +166,7 @@ impl<'a> Pointer<'a, SmartString> {
 
 impl<'a> Pointer<'a, Box<str>> {
     /// Returns the identifier of the value pointed to by this pointer.
+    #[must_use]
     #[inline]
     pub fn id(&self) -> ValueId {
         self.into()
@@ -164,6 +175,7 @@ impl<'a> Pointer<'a, Box<str>> {
 
 impl<'a> Pointer<'a, ByteVector> {
     /// Returns the identifier of the value pointed to by this pointer.
+    #[must_use]
     #[inline]
     pub fn id(&self) -> ValueId {
         self.into()
@@ -172,6 +184,7 @@ impl<'a> Pointer<'a, ByteVector> {
 
 impl<'a> Pointer<'a, Vector<'a>> {
     /// Returns the identifier of the value pointed to by this pointer.
+    #[must_use]
     #[inline]
     pub fn id(&self) -> ValueId {
         self.into()
@@ -221,7 +234,7 @@ impl<'a, T: Trace<'a> + fmt::Debug> Trace<'a> for Pointer<'a, T> {
         let value = unsafe { self.0.as_ref() };
         let value = value.value().expect("undefined-pointer");
 
-        value.trace(traced)
+        value.trace(traced);
     }
 }
 

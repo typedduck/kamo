@@ -5,12 +5,12 @@ use crate::parser::Span;
 use super::code::Code;
 
 /// Defines an error which occurred during parsing.
-/// 
+///
 /// The cause is represented by a [`Span`], a [`Code`] and a message. The
 /// [`Span`] indicates the position in the input where the error occurred. The
 /// [`Code`] indicates the type of the error. The message is a human readable
 /// description of the error.
-/// 
+///
 /// The cause can be printed in two different ways. The default way only prints
 /// the message. When printed in alternate mode, the [`Span`], and the message
 /// are printed. In debug mode, the [`Code`] is printed, too. When alternate
@@ -36,20 +36,23 @@ impl Cause {
     }
 
     /// Returns the [`Span`] of the cause.
+    #[must_use]
     #[inline]
-    pub fn span(&self) -> Span {
+    pub const fn span(&self) -> Span {
         self.span
     }
 
     /// Returns the [`Code`] of the cause.
+    #[must_use]
     #[inline]
-    pub fn code(&self) -> Code {
+    pub const fn code(&self) -> Code {
         self.code
     }
 
     /// Returns the message of the cause.
+    #[must_use]
     #[inline]
-    pub fn message(&self) -> &str {
+    pub const fn message(&self) -> &str {
         &self.message
     }
 }

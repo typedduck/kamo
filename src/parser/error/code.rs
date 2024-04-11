@@ -1,13 +1,13 @@
 //! Error codes for the parser.
 
 /// Error codes for the parser.
-/// 
+///
 /// Codes are grouped by their type. The first byte of the code indicates the
 /// type of the error. The second byte indicates the category of the error. The
 /// codes from `0x0000_0000` to `0x0000_ffff` are reserved for the core library.
 /// The codes from `0x8000_0000` to `0xffff_ffff` are reserved for custom
 /// errors.
-/// 
+///
 /// These codes are used to identify the error in the
 /// [`ParseError`](crate::parser::ParseError) and to provide a unique method to
 /// identify the error. This is a convenient way to handle errors in a
@@ -15,7 +15,7 @@
 /// their errors. But they can also use the core error codes if they want to or
 /// omit the error code completely and only use the error message with an error
 /// code of [`ERR_CUSTOM`].
-/// 
+///
 /// An important error code is [`ERR_EOF`]. It is used to indicate an unexpected
 /// end of file and can be used to determine if more input is required to parse
 /// the input.
@@ -45,20 +45,22 @@ pub const ERR_GRAPHIC: Code = 0x0000_0209;
 pub const ERR_TAKE: Code = 0x0000_020a;
 pub const ERR_TAKE_WHILE_M: Code = 0x0000_020b;
 pub const ERR_TAKE_WHILE_1: Code = 0x0000_020c;
-pub const ERR_NONE_OF: Code = 0x0000_020d;
-pub const ERR_ONE_OF: Code = 0x0000_020e;
-pub const ERR_SATISFY: Code = 0x0000_020f;
-pub const ERR_LINE_ENDING: Code = 0x0000_0210;
-pub const ERR_ALPHA: Code = 0x0000_0211;
-pub const ERR_ALPHANUM: Code = 0x0000_0212;
-pub const ERR_NUMERIC: Code = 0x0000_0213;
-pub const ERR_LOWERCASE: Code = 0x0000_0214;
-pub const ERR_UPPERCASE: Code = 0x0000_0215;
-pub const ERR_IDENT_START: Code = 0x0000_0216;
-pub const ERR_ANY_CHAR: Code = 0x0000_0217;
-pub const ERR_IS_NOT: Code = 0x0000_0218;
+pub const ERR_NEWLINE: Code = 0x0000_020d;
+pub const ERR_NONE_OF: Code = 0x0000_020e;
+pub const ERR_ONE_OF: Code = 0x0000_020f;
+pub const ERR_SATISFY: Code = 0x0000_0210;
+pub const ERR_LINE_ENDING: Code = 0x0000_0211;
+pub const ERR_ALPHA: Code = 0x0000_0212;
+pub const ERR_ALPHANUM: Code = 0x0000_0213;
+pub const ERR_NUMERIC: Code = 0x0000_0214;
+pub const ERR_TAB: Code = 0x0000_0215;
+pub const ERR_LOWERCASE: Code = 0x0000_0216;
+pub const ERR_UPPERCASE: Code = 0x0000_0217;
+pub const ERR_IDENT_START: Code = 0x0000_0218;
+pub const ERR_ANY_CHAR: Code = 0x0000_0219;
+pub const ERR_IS_NOT: Code = 0x0000_021a;
 #[cfg(feature = "regex")]
-pub const ERR_REGEX: Code = 0x0000_0217;
+pub const ERR_REGEX: Code = 0x0000_021b;
 /// Characters errors end at `0x0000_02ff`.
 pub const ERR_CHAR_END: Code = 0x0000_0300;
 

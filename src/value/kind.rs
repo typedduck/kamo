@@ -1,39 +1,41 @@
+#![allow(clippy::module_name_repetitions)]
+
 use std::{hash, ptr::NonNull};
 
 use crate::{mem::Slot, value::SmartString};
 
-use super::{Pair, ValueTag, Vector, ByteVector};
+use super::{ByteVector, Pair, ValueTag, Vector};
 
 /// The `ValueKind` enum represents the different kinds of values that can be
 /// stored in a [`Value`](super). It is the inner part of the `Value` struct and
 /// is not meant to be used directly. Instead, the `Value` struct should be used
 /// to access values.
-/// 
+///
 /// This type is made public in order to allow efficient pattern matching on
 /// values. For example, the following code checks if a value is a pair:
-/// 
+///
 /// ```ignore
 /// match value.kind() {
 ///    ValueKind::Pair(_, _) => println!("It's a pair!"),
 ///   _ => println!("It's not a pair!"),
 /// }
 /// ```
-/// 
+///
 /// The following variants are all immediate values. They are stored directly in
 /// the `Value` struct:
-/// 
+///
 /// - `Nil` is the empty list.
 /// - `Bool` is a boolean value.
 /// - `Char` is a character.
 /// - `Integer` is an integer.
 /// - `Float` is a floating point number.
-/// 
+///
 /// If the feature `evaluate` is enabled, the following variants are also
 /// immediate values:
-/// 
+///
 /// - `Primitive` is a primitive function.
 /// - `Special` is a special form, which is evaluated at compile time.
-/// 
+///
 /// The following variants are all pointers to entries maintained by the
 /// memory manager [`Mutator`](crate::mem). They are all wrapped in a
 /// [`NonNull<T>`] to avoid the overhead of [`RefCell<T>`](std::ptr) and to be
@@ -56,16 +58,16 @@ use super::{Pair, ValueTag, Vector, ByteVector};
 /// [`NonNull<Slot<T>>`]. The [`Slot<T>`] holds the actual value. Slots are
 /// allocated in [`Bucket`](crate::mem)s, which are allocated in
 /// [`Arena`](crate::mem)s and managed by the [`Mutator`](crate::mem).
-/// 
+///
 /// - `Pair` is a cons cell. It contains two values, the `car` and the `cdr`.
 /// - `String` is a string.
 /// - `Symbol` is a symbol.
 /// - `Bytevec` is a bytevector.
 /// - `Vector` is a vector.
-/// 
+///
 /// If the feature `evaluate` is enabled, the following variant is also a
 /// pointer to an entry:
-/// 
+///
 /// - `Procedure` is a callable procedure.
 #[derive(Debug)]
 pub enum ValueKind<'a> {
@@ -97,7 +99,7 @@ impl<'a> ValueKind<'a> {
     /// This is safe because cloning is only possible through the `Value`
     /// struct, which automatically locks the entry. Setting here the boolean to
     /// `true` would result in a double unlock.
-    pub(super) fn new_clone(&self) -> Self {
+    pub(super) const fn new_clone(&self) -> Self {
         match self {
             Self::Nil => Self::Nil,
             Self::Bool(value) => Self::Bool(*value),
@@ -175,51 +177,49 @@ impl<'a> PartialEq for ValueKind<'a> {
                     *a == *b
                 }
             }
-            #[cfg(feature = "evaluate")]
-            (Self::Primitive(a), Self::Primitive(b)) => *a == *b,
             (Self::Pair(_, a), Self::Pair(_, b)) => {
-                if a != b {
+                if a == b {
+                    true
+                } else {
                     let a = unsafe { a.as_ref() };
                     let b = unsafe { b.as_ref() };
                     a == b
-                } else {
-                    true
                 }
             }
             (Self::String(_, a), Self::String(_, b)) => {
-                if a != b {
+                if a == b {
+                    true
+                } else {
                     let a = unsafe { a.as_ref() };
                     let b = unsafe { b.as_ref() };
                     a == b
-                } else {
-                    true
                 }
             }
             (Self::Symbol(_, a), Self::Symbol(_, b)) => {
-                if a != b {
+                if a == b {
+                    true
+                } else {
                     let a = unsafe { a.as_ref() };
                     let b = unsafe { b.as_ref() };
                     a == b
-                } else {
-                    true
                 }
             }
             (Self::Bytevec(_, a), Self::Bytevec(_, b)) => {
-                if a != b {
+                if a == b {
+                    true
+                } else {
                     let a = unsafe { a.as_ref() };
                     let b = unsafe { b.as_ref() };
                     a == b
-                } else {
-                    true
                 }
             }
             (Self::Vector(_, a), Self::Vector(_, b)) => {
-                if a != b {
+                if a == b {
+                    true
+                } else {
                     let a = unsafe { a.as_ref() };
                     let b = unsafe { b.as_ref() };
                     a == b
-                } else {
-                    true
                 }
             }
             _ => false,

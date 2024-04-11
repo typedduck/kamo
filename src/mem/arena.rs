@@ -48,15 +48,15 @@ use super::{Bucket, Pointer, Root, Slot, Trace, TARGET};
 /// Compacting the arena is done automatically after a sweep. This is safe,
 /// because all reachable values in this arena where locked. This sequence must
 /// be ensured to prevent memory leaks.
-/// 
+///
 /// The lifetime `'a` is the lifetime of the [`Mutator`](crate::mem::Mutator).
-
 pub struct Arena<'a, T: fmt::Debug, const N: usize> {
     buckets: Vec<Box<Bucket<'a, T, N>>>,
 }
 
 impl<'a, T: fmt::Debug, const N: usize> Arena<'a, T, N> {
     /// Creates a new empty arena.
+    #[must_use]
     pub fn new() -> Self {
         log::debug!(target: TARGET,
             "Arena: new arena of {} with bucket size {}",
@@ -65,29 +65,34 @@ impl<'a, T: fmt::Debug, const N: usize> Arena<'a, T, N> {
     }
 
     /// Returns the number of entries in the arena that are in use.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.buckets.iter().fold(0, |x, acc| x + acc.len())
     }
 
     /// Returns the total capacity of the arena. This is the size of a bucket
     /// times the number of buckets.
+    #[must_use]
     #[inline]
     pub fn capacity(&self) -> usize {
         N * self.buckets.len()
     }
 
     /// Returns the number of values that can be allocated without reallocating.
+    #[must_use]
     pub fn available(&self) -> usize {
         self.buckets.iter().fold(0, |x, acc| x + acc.available())
     }
 
     /// Returns `true` if the arena is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.buckets.is_empty() || self.buckets.iter().all(|bucket| bucket.is_empty())
     }
 
     /// Returns `true` if the pointer points to a valid entry in the arena and
     /// the entry is occupied.
+    #[must_use]
     pub fn is_valid_pointer(&self, ptr: NonNull<Slot<T>>) -> bool {
         self.buckets
             .iter()
@@ -97,12 +102,16 @@ impl<'a, T: fmt::Debug, const N: usize> Arena<'a, T, N> {
     /// Allocates a new entry in the arena and returns the pointer to the entry.
     /// The returned pointer to the entry is already locked. The
     /// [`Mutator`](crate::mem::Mutator) must be owner of the arena.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the arena reports that slots are available, but the allocation
+    /// fails. This should never happen.
+    #[must_use]
     pub fn alloc(&mut self, value: T) -> Pointer<'a, T> {
         for (idx, bucket) in self.buckets.iter_mut().enumerate().rev() {
             if !bucket.is_full() {
-                let value = bucket
-                    .alloc(value)
-                    .expect("bucket reports it is not full");
+                let value = bucket.alloc(value).expect("bucket reports it is not full");
                 log::debug!(target: TARGET,
                     "Arena: allocating value in arena at {:p} in bucket {}",
                     value.as_ptr(), idx);

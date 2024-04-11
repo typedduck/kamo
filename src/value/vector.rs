@@ -10,7 +10,7 @@ use crate::mem::{Root, ToRoot, Trace};
 use super::Value;
 
 /// A growable, heap-allocated vector of [`Value`]s.
-/// 
+///
 /// In contrast to [`Vec`], a `Vector` is a garbage-collected type and can be
 /// used in [`Value`]s. The `Value`s in a `Vector` are automatically unlocked
 /// when inserted and locked when removed. When the `Vector` is reachable on
@@ -18,11 +18,11 @@ use super::Value;
 /// Unlocking the values when they are inserted is necessary, because the
 /// values may be cyclic. Locking the values when they are removed is necessary,
 /// because the values may be removed from the vector and dropped.
-/// 
+///
 /// The interface of `Vector` is similar to [`Vec`], but it does not implement
 /// all of its methods. For example, `Vector` does not implement `DerefMut` and
 /// `IndexMut` because it is not possible to mutate a `Value` in place.
-/// 
+///
 /// A `Vector` can not be created directly. Instead, use
 /// [`Value::new_vector()`](super::Value::new_vector).
 pub struct Vector<'a> {
@@ -30,6 +30,7 @@ pub struct Vector<'a> {
 }
 
 impl<'a> Vector<'a> {
+    #[must_use]
     pub(crate) fn new(mut elements: Vec<Value<'a>>) -> Self {
         for element in &mut elements {
             element.unlock();
@@ -38,6 +39,7 @@ impl<'a> Vector<'a> {
     }
 
     /// Returns the number of elements the vector can hold without reallocating.
+    #[must_use]
     #[inline]
     pub fn capacity(&self) -> usize {
         self.elements.capacity()
@@ -52,6 +54,7 @@ impl<'a> Vector<'a> {
 
     /// Returns a reference to an [`Value`] or `None` if the index is out of
     /// bounds.
+    #[must_use]
     #[inline]
     pub fn get(&self, index: usize) -> Option<&Value<'a>> {
         self.elements.get(index)
@@ -59,17 +62,20 @@ impl<'a> Vector<'a> {
 
     /// Sets the value of an element at a given index and returns the old value.
     /// If the `index` is equal to the length of the vector, then the value is
-    /// appended to the vector. Panics if the `index` is greater than the
-    /// length.
+    /// appended to the vector.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `index` is greater than the length of the vector.
     pub fn set(&mut self, index: usize, mut new_elem: Value<'a>) -> Option<Value<'a>> {
+        // Check bounds here to avoid panicking after unlocking the value.
+        assert!(index <= self.elements.len(), "index out of bounds");
+        new_elem.unlock();
         if let Some(element) = self.elements.get_mut(index) {
-            new_elem.unlock();
-
             let mut old_elem = std::mem::replace(element, new_elem);
             old_elem.lock();
             Some(old_elem)
         } else {
-            new_elem.unlock();
             self.elements.insert(index, new_elem);
             None
         }
@@ -84,12 +90,14 @@ impl<'a> Vector<'a> {
     }
 
     /// Returns `true` if the vector contains no elements.
+    #[must_use]
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.elements.is_empty()
     }
 
     /// Returns the length of the vector.
+    #[must_use]
     #[inline]
     pub fn len(&self) -> usize {
         self.elements.len()
@@ -189,6 +197,10 @@ impl<'a> Vector<'a> {
     /// Trys to reserve capacity for at least `additional` more elements to be
     /// inserted in the given `Vector`. Returns an error if the capacity would
     /// overflow.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the capacity would overflow.
     #[inline]
     pub fn try_reserve(&mut self, additional: usize) -> Result<(), TryReserveError> {
         self.elements.try_reserve(additional)
@@ -197,6 +209,10 @@ impl<'a> Vector<'a> {
     /// Trys to reserve the minimum capacity for exactly `additional` more
     /// elements to be inserted in the given `Vector`. It will not reserve more
     /// space than necessary. Returns an error if the capacity would overflow.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the capacity would overflow.
     #[inline]
     pub fn try_reserve_exact(&mut self, additional: usize) -> Result<(), TryReserveError> {
         self.elements.try_reserve_exact(additional)

@@ -11,6 +11,12 @@ const FALSE: Value = Value::new_bool(false);
 impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// Parses a boolean literal.
     ///
+    /// # Errors
+    ///
+    /// Fails if the input is not a boolean literal. Returns a [`ParseError`]
+    /// with the code [`ERR_BOOLEAN_LITERAL`] and the error variant
+    /// [`SexprError::BooleanLiteral`].
+    ///
     /// # Grammar
     ///
     /// ```text
@@ -19,10 +25,10 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     pub fn boolean(input: Input<'b>) -> ParseResult<'b, Value<'a>> {
         context_as(
             any((
-                value(TRUE.to_owned(), tag("#true")),
-                value(TRUE.to_owned(), tag("#t")),
-                value(FALSE.to_owned(), tag("#false")),
-                value(FALSE.to_owned(), tag("#f")),
+                value(TRUE.clone(), tag("#true")),
+                value(TRUE.clone(), tag("#t")),
+                value(FALSE.clone(), tag("#false")),
+                value(FALSE.clone(), tag("#f")),
             )),
             ERR_BOOLEAN_LITERAL + ECO,
             SexprError::BooleanLiteral,

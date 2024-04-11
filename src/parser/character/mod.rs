@@ -2,6 +2,7 @@ pub mod ascii;
 pub mod unicode;
 
 mod error;
+#[allow(clippy::module_name_repetitions)]
 pub use error::CharacterError;
 
 mod matches;

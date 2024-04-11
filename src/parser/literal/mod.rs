@@ -4,6 +4,7 @@ mod character;
 pub use character::*;
 
 mod error;
+#[allow(clippy::module_name_repetitions)]
 pub use error::LiteralError;
 
 mod escaped;

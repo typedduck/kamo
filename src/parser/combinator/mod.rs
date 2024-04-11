@@ -2,6 +2,7 @@ mod eof;
 pub use eof::*;
 
 mod error;
+#[allow(clippy::module_name_repetitions)]
 pub use error::CombinatorError;
 
 mod map;

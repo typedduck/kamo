@@ -255,7 +255,7 @@
 //!  
 //! The syntax for the macros is as defined by the Scheme standard R7RS for the
 //! `read` procedure. The syntactic definition is the `<datum>` in section
-//! ["7.1.2 External representations"](https://standards.scheme.org/official/r7rs.pdf)
+//! [`7.1.2 External representations`](https://standards.scheme.org/official/r7rs.pdf)
 //! of the standard.
 //!  
 //! The syntax deviations from the standard are:
@@ -374,61 +374,61 @@ mod tests {
         let m = Mutator::new_ref();
 
         let value = sexpr!(r#"()"#);
-        assert_eq!(print(value).to_string(), r#"()"#);
+        assert_eq!(print(value).to_string(), r"()");
 
         let value = sexpr!(r#"#true"#);
-        assert_eq!(print(value).to_string(), r#"#t"#);
+        assert_eq!(print(value).to_string(), r"#t");
 
         let value = sexpr!(r#"#t"#);
-        assert_eq!(print(value).to_string(), r#"#t"#);
+        assert_eq!(print(value).to_string(), r"#t");
 
         let value = sexpr!(r#"#false"#);
-        assert_eq!(print(value).to_string(), r#"#f"#);
+        assert_eq!(print(value).to_string(), r"#f");
 
         let value = sexpr!(r#"#f"#);
-        assert_eq!(print(value).to_string(), r#"#f"#);
+        assert_eq!(print(value).to_string(), r"#f");
 
         let value = sexpr!(r#"#\a"#);
-        assert_eq!(print(value).to_string(), r#"#\a"#);
+        assert_eq!(print(value).to_string(), r"#\a");
 
         let value = sexpr!(r#"#\a"#);
-        assert_eq!(print(value).to_string(), r#"#\a"#);
+        assert_eq!(print(value).to_string(), r"#\a");
 
         let value = sexpr!(r#"100"#);
-        assert_eq!(print(value).to_string(), r#"100"#);
+        assert_eq!(print(value).to_string(), r"100");
 
         let value = sexpr!(r#".5"#);
-        assert_eq!(print(value).to_string(), r#"0.5"#);
+        assert_eq!(print(value).to_string(), r"0.5");
 
         let value = sexpr!(r#"+inf.0"#);
-        assert_eq!(print(value).to_string(), r#"+inf.0"#);
+        assert_eq!(print(value).to_string(), r"+inf.0");
 
         let value = sexpr!(r#"#b101"#);
-        assert_eq!(print(value).to_string(), r#"5"#);
+        assert_eq!(print(value).to_string(), r"5");
 
         let value = sexpr!(m, r#""Hello World!""#);
         assert_eq!(print(value).to_string(), r#""Hello World!""#);
 
         let value = sexpr!(m, r#"hello"#);
-        assert_eq!(print(value).to_string(), r#"hello"#);
+        assert_eq!(print(value).to_string(), r"hello");
 
         let value = sexpr!(m, r#"#u8( 1 2 3)"#);
-        assert_eq!(print(value).to_string(), r#"#u8(1 2 3)"#);
+        assert_eq!(print(value).to_string(), r"#u8(1 2 3)");
 
         let value = sexpr!(m, r#"'(+ 1 2)"#);
-        assert_eq!(print(value).to_string(), r#"(quote (+ 1 2))"#);
+        assert_eq!(print(value).to_string(), r"(quote (+ 1 2))");
 
         let value = sexpr!(m, r#",(+ 1 2)"#);
-        assert_eq!(print(value).to_string(), r#"(unquote (+ 1 2))"#);
+        assert_eq!(print(value).to_string(), r"(unquote (+ 1 2))");
 
         let value = sexpr!(m, r#"`(+ 1 2)"#);
-        assert_eq!(print(value).to_string(), r#"(quasiquote (+ 1 2))"#);
+        assert_eq!(print(value).to_string(), r"(quasiquote (+ 1 2))");
 
         let value = sexpr!(m, r#",@(+ 1 2)"#);
-        assert_eq!(print(value).to_string(), r#"(unquote-splicing (+ 1 2))"#);
+        assert_eq!(print(value).to_string(), r"(unquote-splicing (+ 1 2))");
 
         let value = sexpr!(m, r#"#(+ 1 2)"#);
-        assert_eq!(print(value).to_string(), r#"#(+ 1 2)"#);
+        assert_eq!(print(value).to_string(), r"#(+ 1 2)");
     }
 
     #[test]

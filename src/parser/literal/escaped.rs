@@ -4,6 +4,16 @@ use super::LiteralError;
 
 /// Parses an escaped character literal.
 ///
+/// This is a character literal that starts with a backslash `\` and is followed
+/// by an escape code. The escape code can be an ASCII escape code, a Unicode
+/// escape code, or a single escape code.
+///
+/// # Errors
+///
+/// An error will occur if the character is not a valid escape code. The error
+/// code is [`ERR_ESCAPE`](code::ERR_ESCAPE) and the error variant is
+/// [`LiteralError::Escape`].
+///
 /// # Grammar:
 ///
 /// ```text
@@ -15,6 +25,7 @@ use super::LiteralError;
 /// UnicodeEscapeCode = "u{" [0-9A-Fa-f]{1,6} '}'
 /// SingleEscapeCode  = ['"\\abednrt0]
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn escaped_char(input: Input<'_>) -> ParseResult<'_, char> {
     preceded(char('\\'), escaped_part)(input).map_err(|mut err| {
         err.push(input, code::ERR_ESCAPE, LiteralError::Escape);
@@ -24,6 +35,15 @@ pub fn escaped_char(input: Input<'_>) -> ParseResult<'_, char> {
 
 /// Parses the quoted character literal part after the escape character.
 ///
+/// This can be an ASCII escape code, a Unicode escape code, or a single escape
+/// code.
+///
+/// # Errors
+///
+/// An error will occur if the character is not a valid escape code. The error
+/// code is [`ERR_ESCAPE_PART`](code::ERR_ESCAPE_PART) and the error variant is
+/// [`LiteralError::Escape`].
+///
 /// # Grammar:
 ///
 /// ```text
@@ -31,6 +51,7 @@ pub fn escaped_char(input: Input<'_>) -> ParseResult<'_, char> {
 ///             | UnicodeEscapeCode
 ///             | SingleEscapeCode
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn escaped_part(input: Input<'_>) -> ParseResult<'_, char> {
     any((ascii_escape_code, unicode_escape_code, single_escape_code))(input).map_err(|mut err| {
         err.push(input, code::ERR_ESCAPE_PART, LiteralError::Escape);
@@ -39,6 +60,12 @@ pub fn escaped_part(input: Input<'_>) -> ParseResult<'_, char> {
 }
 
 /// Parses a single escaped character part.
+///
+/// # Errors
+///
+/// An error will occur if the character is not a valid single escape code.
+/// The error code is [`ERR_SINGLE_ESCAPE_PART`](code::ERR_SINGLE_ESCAPE_PART)
+/// and the error variant is [`LiteralError::SingleEscapeCode`].
 ///
 /// # Grammar:
 ///
@@ -71,6 +98,20 @@ pub fn single_escape_code(input: Input<'_>) -> ParseResult<'_, char> {
 
 /// Parses an ASCII escaped character code.
 ///
+/// The code must be within the range of `0x00` to `0x7F`.
+///
+/// # Errors
+///
+/// An error will occur if the code is not within the valid range.
+/// The error code is [`ERR_ASCII_ESCAPE_CODE`](code::ERR_ASCII_ESCAPE_CODE) and
+/// the error variant is [`LiteralError::AsciiEscapeCode`].
+///
+/// # Panics
+///
+/// This function will panic if the code point is not a valid ASCII character.
+/// This should never happen as the code point is guaranteed to be within the
+/// valid range.
+///
 /// # Grammar:
 ///
 /// ```text
@@ -89,12 +130,20 @@ pub fn ascii_escape_code(input: Input<'_>) -> ParseResult<'_, char> {
         );
         err
     })?;
-    let ch = char::from_u32((hi << 4) + lo).unwrap();
+    let code = (hi << 4) + lo;
 
-    Ok((ch, cursor))
+    Ok((char::from_u32(code).unwrap(), cursor))
 }
 
 /// Parses a Unicode escaped character.
+///
+/// The code point must be within the range of `0x0` to `0x10FFFF`.
+///
+/// # Errors
+///
+/// An error will occur if the code point is not within the valid range.
+/// The error code is [`ERR_UNICODE_CHAR`](code::ERR_UNICODE_CHAR) and the error
+/// variant is [`LiteralError::UnicodeEscapeCode`].
 ///
 /// # Grammar:
 ///
@@ -122,13 +171,15 @@ pub fn unicode_escape_code(input: Input<'_>) -> ParseResult<'_, char> {
         err
     })?;
 
-    match char::from_u32(code) {
-        Some(ch) => Ok((ch, cursor)),
-        None => Err(ParseError::new(
-            Span::new(input.position(), cursor.position()),
-            code::ERR_UNICODE_CHAR,
-            LiteralError::UnicodeChar(code),
-        )
-        .and_semantic()),
-    }
+    char::from_u32(code).map_or_else(
+        || {
+            Err(ParseError::new(
+                Span::new(input.position(), cursor.position()),
+                code::ERR_UNICODE_CHAR,
+                LiteralError::UnicodeChar(code),
+            )
+            .and_semantic())
+        },
+        |ch| Ok((ch, cursor)),
+    )
 }

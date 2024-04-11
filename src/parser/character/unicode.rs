@@ -27,6 +27,10 @@ use super::CharacterError;
 
 /// Matches zero or more Unicode alphabetic characters.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Example
 ///
 /// ```rust
@@ -51,6 +55,13 @@ pub fn alpha0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches one or more Unicode alphabetic characters.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not an alphabetical
+/// character, it returns a [`ParseError`] with the error code
+/// [`ERR_ALPHA`](code::ERR_ALPHA) and the error variant
+/// [`CharacterError::UnicodeAlpha`].
 ///
 /// # Example
 ///
@@ -96,6 +107,10 @@ pub fn alpha1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more Unicode alphanumeric characters.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Example
 ///
 /// ```rust
@@ -120,6 +135,13 @@ pub fn alphanum0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches one or more Unicode alphanumeric characters.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not an alphanumeric
+/// character, it returns a [`ParseError`] with the error code
+/// [`ERR_ALPHANUM`](code::ERR_ALPHANUM) and the error variant
+/// [`CharacterError::UnicodeAlphaNum`].
 ///
 /// # Example
 ///
@@ -165,6 +187,10 @@ pub fn alphanum1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more Unicode numeric characters.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Example
 ///
 /// ```rust
@@ -189,6 +215,13 @@ pub fn numeric0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches one or more Unicode numeric characters.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a numeric character,
+/// it returns a [`ParseError`] with the error code
+/// [`ERR_NUMERIC`](code::ERR_NUMERIC) and the error variant
+/// [`CharacterError::UnicodeNumeric`].
 ///
 /// # Example
 ///
@@ -234,6 +267,10 @@ pub fn numeric1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more Unicode lowercase characters.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Example
 ///
 /// ```rust
@@ -258,6 +295,13 @@ pub fn lowercase0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches one or more Unicode lowercase characters.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a lowercase character,
+/// it returns a [`ParseError`] with the error code
+/// [`ERR_LOWERCASE`](code::ERR_LOWERCASE) and the error variant
+/// [`CharacterError::UnicodeLowercase`].
 ///
 /// # Example
 ///
@@ -307,6 +351,10 @@ pub fn lowercase1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more Unicode uppercase characters.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Example
 ///
 /// ```rust
@@ -331,6 +379,13 @@ pub fn uppercase0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches one or more Unicode uppercase characters.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not an uppercase character,
+/// it returns a [`ParseError`] with the error code
+/// [`ERR_UPPERCASE`](code::ERR_UPPERCASE) and the error variant
+/// [`CharacterError::UnicodeUppercase`].
 ///
 /// # Example
 ///
@@ -380,6 +435,10 @@ pub fn uppercase1(input: Input<'_>) -> ParseResult<&str> {
 
 /// Matches zero or more Unicode whitespace characters.
 ///
+/// # Errors
+///
+/// This function does not return any errors.
+///
 /// # Example
 ///
 /// ```rust
@@ -404,6 +463,13 @@ pub fn whitespace0(input: Input<'_>) -> ParseResult<&str> {
 }
 
 /// Matches one or more Unicode whitespace characters.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not a whitespace character,
+/// it returns a [`ParseError`] with the error code
+/// [`ERR_WHITESPACE`](code::ERR_WHITESPACE) and the error variant
+/// [`CharacterError::UnicodeWhitespace`].
 ///
 /// # Example
 ///
@@ -457,12 +523,19 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
 /// The standard states that the following characters are valid identifier start
 /// characters:
 ///
-/// > Start characters are derived from the Unicode General_Category of
+/// > Start characters are derived from the Unicode `General_Category` of
 /// > uppercase letters, lowercase letters, titlecase letters, modifier letters,
-/// > other letters, letter numbers, plus Other_ID_Start, minus Pattern_Syntax
-/// > and Pattern_White_Space code points.
+/// > other letters, letter numbers, plus `Other_ID_Start`, minus
+/// > `Pattern_Syntax` and `Pattern_White_Space` code points.
 ///
 /// This includes the ASCII characters `A-Z` and `a-z`.
+///
+/// # Errors
+///
+/// If the input is empty or the first character is not an identifier start
+/// character, it returns a [`ParseError`] with the error code
+/// [`ERR_IDENT_START`](code::ERR_IDENT_START) and the error variant
+/// [`CharacterError::UnicodeIdentStart`].
 ///
 /// # Example
 ///
@@ -500,24 +573,27 @@ pub fn whitespace1(input: Input<'_>) -> ParseResult<&str> {
 pub fn ident_start(input: Input<'_>) -> ParseResult<char> {
     let mut cursor = input;
 
-    if let Some(ch) = cursor.current() {
-        if predicate::is_ident_start(ch) {
-            cursor.advance();
-            Ok((ch, cursor))
-        } else {
-            Err(ParseError::new(
+    cursor.current().map_or_else(
+        || {
+            Err(ParseError::eof(input).and(
                 input,
                 code::ERR_IDENT_START,
                 CharacterError::UnicodeIdentStart,
             ))
-        }
-    } else {
-        Err(ParseError::eof(input).and(
-            input,
-            code::ERR_IDENT_START,
-            CharacterError::UnicodeIdentStart,
-        ))
-    }
+        },
+        |ch| {
+            if predicate::is_ident_start(ch) {
+                cursor.advance();
+                Ok((ch, cursor))
+            } else {
+                Err(ParseError::new(
+                    input,
+                    code::ERR_IDENT_START,
+                    CharacterError::UnicodeIdentStart,
+                ))
+            }
+        },
+    )
 }
 
 /// Matches a Unicode identifier start character or a character that satisfies
@@ -530,10 +606,10 @@ pub fn ident_start(input: Input<'_>) -> ParseResult<char> {
 /// The standard states that the following characters are valid identifier start
 /// characters:
 ///
-/// > Start characters are derived from the Unicode General_Category of
+/// > Start characters are derived from the Unicode `General_Category` of
 /// > uppercase letters, lowercase letters, titlecase letters, modifier letters,
-/// > other letters, letter numbers, plus Other_ID_Start, minus Pattern_Syntax
-/// > and Pattern_White_Space code points.
+/// > other letters, letter numbers, plus `Other_ID_Start`, minus
+/// > `Pattern_Syntax` and `Pattern_White_Space` code points.
 ///
 /// This includes the ASCII characters `A-Z` and `a-z`.
 ///
@@ -579,24 +655,27 @@ where
     move |input| {
         let mut cursor = input;
 
-        if let Some(ch) = cursor.current() {
-            if predicate::is_ident_start(ch) || predicate(ch) {
-                cursor.advance();
-                Ok((ch, cursor))
-            } else {
-                Err(ParseError::new(
+        cursor.current().map_or_else(
+            || {
+                Err(ParseError::eof(input).and(
                     input,
                     code::ERR_IDENT_START,
                     CharacterError::UnicodeIdentStart,
                 ))
-            }
-        } else {
-            Err(ParseError::eof(input).and(
-                input,
-                code::ERR_IDENT_START,
-                CharacterError::UnicodeIdentStart,
-            ))
-        }
+            },
+            |ch| {
+                if predicate::is_ident_start(ch) || predicate(ch) {
+                    cursor.advance();
+                    Ok((ch, cursor))
+                } else {
+                    Err(ParseError::new(
+                        input,
+                        code::ERR_IDENT_START,
+                        CharacterError::UnicodeIdentStart,
+                    ))
+                }
+            },
+        )
     }
 }
 
@@ -607,12 +686,16 @@ where
 /// continuation characters:
 ///
 /// > Continue characters include [start characters](ident_start), plus
-/// > characters having the Unicode General_Category of nonspacing marks,
+/// > characters having the Unicode `General_Category` of nonspacing marks,
 /// > spacing combining marks, decimal number, connector punctuation, plus
-/// > Other_ID_Continue, minus Pattern_Syntax and Pattern_White_Space code
+/// > `Other_ID_Continue`, minus `Pattern_Syntax` and `Pattern_White_Space` code
 /// > points.
 ///
 /// This includes the ASCII characters `A-Z`, `a-z`, `0-9` and `_`.
+///
+/// # Errors
+///
+/// This function does not return any errors.
 ///
 /// # Example
 ///
@@ -648,10 +731,10 @@ pub fn ident_cont(input: Input<'_>) -> ParseResult<&str> {
 /// The standard states that the following characters are valid identifier
 /// continuation characters:
 ///
-/// > Continuation characters are derived from the Unicode General_Category of
+/// > Continuation characters are derived from the Unicode `General_Category` of
 /// > uppercase letters, lowercase letters, titlecase letters, modifier letters,
-/// > other letters, letter numbers, plus Other_ID_Continue, minus Pattern_Syntax
-/// > and Pattern_White_Space code points.
+/// > other letters, letter numbers, plus `Other_ID_Continue`, minus
+/// > `Pattern_Syntax` and `Pattern_White_Space` code points.
 ///
 /// This includes the ASCII characters `A-Z`, `a-z` and `0-9`.
 ///

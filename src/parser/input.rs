@@ -33,6 +33,7 @@ pub struct Input<'a> {
 
 impl<'a> Input<'a> {
     /// Creates a new input from a string slice.
+    #[must_use]
     pub fn new(input: &'a str) -> Self {
         let current = if let Some((_, ch)) = Self::decode(input) {
             (Some(ch), Position::new(0, 1, 1), ch == '\n')
@@ -46,6 +47,7 @@ impl<'a> Input<'a> {
 
     /// Creates a new input from an existing input. The new input is set to the
     /// end of input. It preserves the current position and newline state.
+    #[must_use]
     pub fn eof_from(input: Input<'_>) -> Self {
         let current = (None, input.position(), input.newline());
 
@@ -67,6 +69,7 @@ impl<'a> Input<'a> {
     /// assert_eq!(input.advance(), None);
     /// assert_eq!(input.current(), None);
     /// ```
+    #[must_use]
     #[inline]
     pub const fn current(&self) -> Option<char> {
         self.current.0
@@ -88,6 +91,7 @@ impl<'a> Input<'a> {
     /// assert_eq!(input.position().line(), 1);
     /// assert_eq!(input.position().column(), 4);
     /// ```
+    #[must_use]
     #[inline]
     pub const fn position(&self) -> Position {
         self.current.1
@@ -106,6 +110,7 @@ impl<'a> Input<'a> {
     /// assert!(input.newline());
     /// assert_eq!(input.advance(), Some('1'));
     /// ```
+    #[must_use]
     #[inline]
     pub const fn newline(&self) -> bool {
         self.current.2
@@ -113,6 +118,10 @@ impl<'a> Input<'a> {
 
     /// Reads and returns the next charater. After the function returns the
     /// charater is the current. Returns `None` if end of input is reached.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the offset overflows a `u32`.
     ///
     /// ```rust
     /// # use kamo::parser::Input;
@@ -141,18 +150,18 @@ impl<'a> Input<'a> {
                 }
                 *curr_ch = Some(next_ch);
                 *newline = next_ch == '\n';
-                pos.offset += offset as u32;
+                pos.offset += u32::try_from(offset).expect("offset overflow");
                 log::trace!(target: TARGET, "input: {:#}: {:?}", pos, next_ch);
                 return Some(next_ch);
-            } else {
-                let (ch, pos, _) = &mut self.current;
-
-                if *ch != Some('\r') {
-                    pos.column += 1;
-                }
-                *ch = None;
-                pos.offset += offset as u32;
             }
+
+            let (ch, pos, _) = &mut self.current;
+
+            if *ch != Some('\r') {
+                pos.column += 1;
+            }
+            *ch = None;
+            pos.offset += u32::try_from(offset).expect("offset overflow");
         }
         log::debug!(target: TARGET, "Input: {:#}: reached end of input", self.current.1);
         None
@@ -338,24 +347,28 @@ impl<'a> Input<'a> {
     }
 
     /// Return the length of the input in bytes.
+    #[must_use]
     #[inline]
     pub const fn len(&self) -> usize {
         self.input.len()
     }
 
     /// Return if the input is empty.
+    #[must_use]
     #[inline]
     pub const fn is_empty(&self) -> bool {
         self.input.is_empty()
     }
 
     /// Return if the input is at the end.
+    #[must_use]
     #[inline]
     pub const fn is_eof(&self) -> bool {
         self.current.0.is_none()
     }
 
     /// Returns a reference to the underlying string.
+    #[must_use]
     #[inline]
     pub const fn as_str(&self) -> &'a str {
         self.input
@@ -363,12 +376,10 @@ impl<'a> Input<'a> {
 
     #[inline]
     fn decode(input: &str) -> Option<(usize, char)> {
-        if let Some(ch) = input.chars().next() {
+        input.chars().next().map(|ch| {
             let offset = ch.len_utf8();
-            Some((offset, ch))
-        } else {
-            None
-        }
+            (offset, ch)
+        })
     }
 }
 
@@ -394,6 +405,7 @@ impl<'a> From<&'a String> for Input<'a> {
 mod tests {
     use super::*;
 
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn input_advance() {
         let mut input = Input::new("abc\n123");
@@ -443,6 +455,7 @@ mod tests {
         assert!(!input.newline());
     }
 
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn input_advance_if() {
         let mut input = Input::new("abc\n123");

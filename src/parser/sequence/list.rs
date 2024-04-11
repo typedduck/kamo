@@ -35,6 +35,7 @@ use super::{fold_list_n, SequenceError};
 ///     SequenceError::ListNext
 /// )));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 #[inline]
 pub fn list_n<'a, 'b, F1, F2, O1, O2>(
     n: usize,
@@ -84,6 +85,7 @@ where
 ///     SequenceError::ListNext
 /// )));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 #[inline]
 pub fn list0<'a, 'b, F1, F2, O1, O2>(
     item: F1,
@@ -102,7 +104,7 @@ where
 /// returns a vector of the results.
 ///
 /// Calls [`fold_list_n()`], `n` is set to `usize::MAX`.
-/// 
+///
 /// # Examples
 ///
 /// ```rust
@@ -134,7 +136,7 @@ where
 ///     code::ERR_LIST_NEXT,
 ///     SequenceError::ListNext,
 /// ));
-/// 
+///
 /// let error = parser.parse("".into()).expect_err("error output");
 ///
 /// assert!(error.is_eof());
@@ -144,6 +146,7 @@ where
 ///     SequenceError::ListStart,
 /// ));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn list1<'a, 'b, F1, F2, O1, O2>(
     item: F1,
     separator: F2,
@@ -216,6 +219,7 @@ where
 ///     SequenceError::ListM(1),
 /// ));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn list_m_n<'a, 'b, F1, F2, O1, O2>(
     m: usize,
     n: usize,

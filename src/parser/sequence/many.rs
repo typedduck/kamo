@@ -26,6 +26,7 @@ use super::{fold_many_n, SequenceError};
 /// assert_eq!(parser(Input::new("")),
 ///    Ok((vec![], Input::new(""))));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 #[inline]
 pub fn many_n<'a, 'b, F, O>(n: usize, item: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, Vec<O>>
 where
@@ -58,6 +59,7 @@ where
 /// assert_eq!(parser(Input::new("b")), Ok((vec![], Input::new("b"))));
 /// assert_eq!(parser(Input::new("")), Ok((vec![], Input::new(""))));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 #[inline]
 pub fn many0<'a, 'b, F, O>(item: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, Vec<O>>
 where
@@ -95,6 +97,7 @@ where
 ///     SequenceError::Many1
 /// )));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn many1<'a, 'b, F, O>(item: F) -> impl FnMut(Input<'a>) -> ParseResult<'a, Vec<O>>
 where
     O: 'b,
@@ -152,6 +155,7 @@ where
 ///     SequenceError::ManyM(2)
 /// )));
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn many_m_n<'a, 'b, F, O>(
     m: usize,
     n: usize,

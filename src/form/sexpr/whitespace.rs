@@ -11,6 +11,17 @@ use super::{
 impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// Parses optional intertoken whitespace and comments.
     ///
+    /// # Errors
+    ///
+    /// Comments which are not properly closed will result in an error. Returns
+    /// a [`ParseError`] with code [`ERR_COMMENT_CLOSE`] and the message
+    /// [`SexprError::CommentClose`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`unicode::whitespace0()`] returns an error. This should never
+    /// happen as the function does not return an error.
+    ///
     /// # Grammar
     ///
     /// ```text
@@ -33,9 +44,8 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
             if cursor.position() == next.position() {
                 return Ok(((), next));
-            } else {
-                cursor = next;
             }
+            cursor = next;
         }
     }
 
@@ -51,6 +61,12 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     }
 
     /// Parses whitespace and comments.
+    ///
+    /// # Errors
+    ///
+    /// If the input does not contain any whitespace, an error is returned.
+    /// Returns a [`ParseError`] with code [`ERR_WHITESPACE`] and the message
+    /// [`SexprError::Whitespace`].
     ///
     /// # Grammar
     ///
@@ -68,6 +84,12 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
     /// Parses a comment.
     ///
+    /// # Errors
+    ///
+    /// If the input does not start with a comment or the comment is not properly
+    /// closed, an error is returned. Returns a [`ParseError`] with code
+    /// [`ERR_COMMENT`] and the message [`SexprError::Comment`].
+    ///
     /// # Grammar
     ///
     /// ```text
@@ -80,10 +102,10 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     pub fn comment(input: Input<'b>) -> ParseResult<'b, &'b str> {
         let mut cursor = input;
 
-        if let Some(true) = cursor.advance_tag(";") {
+        if cursor.advance_tag(";") == Some(true) {
             return Self::comment_line(input);
         }
-        if let Some(true) = cursor.advance_tag("#|") {
+        if cursor.advance_tag("#|") == Some(true) {
             return Self::comment_nested(input);
         }
         Err(ParseError::new(
@@ -97,7 +119,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
         let (_, mut cursor) = char(';')(input)?;
 
         cursor.advance_while(|c| c != '\n');
-        if let Some('\n') = cursor.current() {
+        if cursor.current() == Some('\n') {
             cursor.advance();
         }
 
@@ -112,7 +134,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
             terminated(Self::comment_text, many0_count(Self::comment_cont)),
             tag("|#"),
         )(input)
-        .map(|(_, cursor)| {
+        .map(|((), cursor)| {
             let output =
                 &input.as_str()[..(cursor.position().offset() - input.position().offset())];
             (output, cursor)
@@ -121,7 +143,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
             match err.code() {
                 code::ERR_EOF | code::ERR_TERMINATED => {
                     let span = err.span();
-                    err.push(span, ERR_COMMENT_CLOSE + ECO, SexprError::CommentClose)
+                    err.push(span, ERR_COMMENT_CLOSE + ECO, SexprError::CommentClose);
                 }
                 _ => {}
             }
@@ -129,6 +151,9 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
         })
     }
 
+    /// Wrapping the return type in a [`ParseResult`] is necessary, otherwise
+    /// this function would not be able to be called as a parser.
+    #[allow(clippy::unnecessary_wraps)]
     fn comment_text(input: Input<'b>) -> ParseResult<'b, ()> {
         let mut cursor = input;
 

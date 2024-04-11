@@ -17,7 +17,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// vector = "#(" intertoken (datum intertoken)* ")"
     /// ```
     pub fn vector(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> + '_ {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         move |input| {
             map(
@@ -33,10 +33,10 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
                 match err.code() {
                     code::ERR_PRECEDED => {
-                        err.push(span, ERR_VECTOR_LITERAL + ECO, SexprError::VectorClosing)
+                        err.push(span, ERR_VECTOR_LITERAL + ECO, SexprError::VectorClosing);
                     }
                     code::ERR_TERMINATED => {
-                        err.push(span, ERR_VECTOR_CLOSING + ECO, SexprError::VectorClosing)
+                        err.push(span, ERR_VECTOR_CLOSING + ECO, SexprError::VectorClosing);
                     }
                     _ => (),
                 }
@@ -57,7 +57,7 @@ mod tests {
     #[test]
     fn vector_success() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned());
+        let sexpr = Sexpr::<0>::new(m.clone());
         let parse = sexpr.vector();
 
         assert_eq!(

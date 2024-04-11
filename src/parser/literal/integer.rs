@@ -25,14 +25,16 @@ use super::{LiteralError, Radix};
 ///
 /// R = 2 | 8 | 10 | 16
 /// ```
+#[allow(clippy::module_name_repetitions)]
 pub fn recognize_integer(
     radix: Radix,
     signed: bool,
 ) -> impl for<'a> Fn(Input<'a>) -> ParseResult<'a, &str> {
     move |input| {
-        match signed {
-            true => recognize(tuple((opt(any((char('+'), char('-')))), radix.digit1())))(input),
-            false => recognize(radix.digit1())(input),
+        if signed {
+            recognize(tuple((opt(any((char('+'), char('-')))), radix.digit1())))(input)
+        } else {
+            recognize(radix.digit1())(input)
         }
         .map_err(|mut err| {
             err.push(input, code::ERR_INTEGER_FORMAT, LiteralError::IntegerFormat);
@@ -113,7 +115,7 @@ mod tests {
 
     #[test]
     fn recognize_integer_success() {
-        for (value, radix) in INTEGERS.iter() {
+        for (value, radix) in &INTEGERS {
             let input = Input::new(value);
             let result = recognize_integer(*radix, true)(input);
             assert_eq!(result, Ok((*value, Input::new(""))));
@@ -122,7 +124,7 @@ mod tests {
 
     #[test]
     fn integer_success() {
-        for (value, radix) in INTEGERS.iter() {
+        for (value, radix) in &INTEGERS {
             let input = Input::new(value);
             let result = integer(*radix, true)(input);
             assert_eq!(

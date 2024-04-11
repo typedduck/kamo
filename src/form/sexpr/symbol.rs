@@ -18,7 +18,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     ///
     /// ```text
     /// symbol                 = (symbol_initial symbol_subsequent*)
-    ///                        | ([+\-] 
+    ///                        | ([+\-]
     ///                              ( (symbol_sign_subsequent symbol_subsequent*)
     ///                              | ([.] symbol_dot_subsequent symbol_subsequent*))
     ///                        | ([.] symbol_dot_subsequent symbol_subsequent*))
@@ -33,8 +33,9 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
     /// symbol_dot_subsequent  = symbol_sign_subsequent | "."
     /// hex-code               = [0-9a-fA-F]{1,6}
     /// ```
+    #[allow(clippy::missing_panics_doc)]
     pub fn symbol(&self) -> impl Fn(Input<'b>) -> ParseResult<'b, Value<'a>> + '_ {
-        let m = self.m.to_owned();
+        let m = self.m.clone();
 
         move |input| match input.current() {
             Some(ch) if Self::is_initial(ch) => {
@@ -44,7 +45,7 @@ impl<'a, 'b, const ECO: Code> Sexpr<'a, ECO> {
 
                 Ok((m.borrow_mut().new_symbol(symbol).into(), cursor))
             }
-            Some('+') | Some('-') => {
+            Some('+' | '-') => {
                 let mut parse = recognize(pair(
                     one_of("+-"),
                     opt(any((
@@ -222,22 +223,22 @@ mod tests {
     use super::*;
 
     const ESCAPES: &[(&str, &str, char)] = &[
-        (r#"\a"#, "", '\x07'),
-        (r#"\b"#, "", '\x08'),
-        (r#"\t"#, "", '\t'),
-        (r#"\n"#, "", '\n'),
-        (r#"\r"#, "", '\r'),
-        (r#"\\"#, "", '\\'),
-        (r#"\|"#, "", '|'),
-        (r#"\x20;"#, "", ' '),
-        (r#"\a "#, " ", '\x07'),
-        (r#"\b "#, " ", '\x08'),
-        (r#"\t "#, " ", '\t'),
-        (r#"\n "#, " ", '\n'),
-        (r#"\r "#, " ", '\r'),
-        (r#"\\ "#, " ", '\\'),
-        (r#"\| "#, " ", '|'),
-        (r#"\x20; "#, " ", ' '),
+        (r"\a", "", '\x07'),
+        (r"\b", "", '\x08'),
+        (r"\t", "", '\t'),
+        (r"\n", "", '\n'),
+        (r"\r", "", '\r'),
+        (r"\\", "", '\\'),
+        (r"\|", "", '|'),
+        (r"\x20;", "", ' '),
+        (r"\a ", " ", '\x07'),
+        (r"\b ", " ", '\x08'),
+        (r"\t ", " ", '\t'),
+        (r"\n ", " ", '\n'),
+        (r"\r ", " ", '\r'),
+        (r"\\ ", " ", '\\'),
+        (r"\| ", " ", '|'),
+        (r"\x20; ", " ", ' '),
     ];
 
     #[test]
@@ -256,7 +257,7 @@ mod tests {
     fn symbol_escape_failure() {
         let parse = Sexpr::<0>::symbol_escape;
 
-        let input = Input::new(r#"\x20"#);
+        let input = Input::new(r"\x20");
         let expected = Err(ParseError::new(
             Span::new(Position::new(2, 1, 3), Position::new(4, 1, 5)),
             ERR_SYMBOL_CODE,
@@ -265,7 +266,7 @@ mod tests {
 
         assert_eq!(parse(input), expected);
 
-        let input = Input::new(r#"\xg;"#);
+        let input = Input::new(r"\xg;");
         let expected = Err(ParseError::new(
             Position::new(2, 1, 3),
             ERR_SYMBOL_CODE,
@@ -274,7 +275,7 @@ mod tests {
 
         assert_eq!(parse(input), expected);
 
-        let input = Input::new(r#"\g"#);
+        let input = Input::new(r"\g");
         let expected = Err(ParseError::new(
             Span::new(Position::new(0, 1, 1), Position::new(1, 1, 2)),
             ERR_SYMBOL_ESCAPE,
@@ -294,43 +295,43 @@ mod tests {
     }
 
     const SYMBOLS: &[(&str, &str, &str)] = &[
-        (r#"hello"#, "", "hello"),
-        (r#"..."#, "", "..."),
-        (r#".."#, "", ".."),
-        (r#"+"#, "", "+"),
-        (r#"+soup+"#, "", "+soup+"),
-        (r#"<=?"#, "", "<=?"),
-        (r#"->string"#, "", "->string"),
-        (r#"a34kTMNs"#, "", "a34kTMNs"),
-        (r#"lambda"#, "", "lambda"),
-        (r#"list->vector"#, "", "list->vector"),
-        (r#"q"#, "", "q"),
-        (r#"V17a"#, "", "V17a"),
+        (r"hello", "", "hello"),
+        (r"...", "", "..."),
+        (r"..", "", ".."),
+        (r"+", "", "+"),
+        (r"+soup+", "", "+soup+"),
+        (r"<=?", "", "<=?"),
+        (r"->string", "", "->string"),
+        (r"a34kTMNs", "", "a34kTMNs"),
+        (r"lambda", "", "lambda"),
+        (r"list->vector", "", "list->vector"),
+        (r"q", "", "q"),
+        (r"V17a", "", "V17a"),
         (
-            r#"the-word-recursion-has-many-meanings"#,
+            r"the-word-recursion-has-many-meanings",
             "",
             "the-word-recursion-has-many-meanings",
         ),
-        (r#"|two words|"#, "", "two words"),
-        (r#"|two\x20;words|"#, "", "two words"),
-        (r#"|two\nwords|"#, "", "two\nwords"),
-        (r#"|two\|words|"#, "", "two|words"),
-        (r#"hello "#, " ", "hello"),
-        (r#"... "#, " ", "..."),
-        (r#".. "#, " ", ".."),
-        (r#"+ "#, " ", "+"),
-        (r#"+soup+ "#, " ", "+soup+"),
-        (r#"<=? "#, " ", "<=?"),
-        (r#"->string "#, " ", "->string"),
-        (r#"a34kTMNs "#, " ", "a34kTMNs"),
-        (r#"lambda "#, " ", "lambda"),
-        (r#"|two words| "#, " ", "two words"),
+        (r"|two words|", "", "two words"),
+        (r"|two\x20;words|", "", "two words"),
+        (r"|two\nwords|", "", "two\nwords"),
+        (r"|two\|words|", "", "two|words"),
+        (r"hello ", " ", "hello"),
+        (r"... ", " ", "..."),
+        (r".. ", " ", ".."),
+        (r"+ ", " ", "+"),
+        (r"+soup+ ", " ", "+soup+"),
+        (r"<=? ", " ", "<=?"),
+        (r"->string ", " ", "->string"),
+        (r"a34kTMNs ", " ", "a34kTMNs"),
+        (r"lambda ", " ", "lambda"),
+        (r"|two words| ", " ", "two words"),
     ];
 
     #[test]
     fn symbol_success() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned());
+        let sexpr = Sexpr::<0>::new(m.clone());
 
         for (i, (input, rest, expected)) in SYMBOLS.iter().enumerate() {
             let input = Input::new(input);
@@ -345,7 +346,7 @@ mod tests {
         let m = Mutator::new_ref();
         let sexpr = Sexpr::<0>::new(m);
 
-        let input = Input::new(r#""#);
+        let input = Input::new(r"");
         let expected = Err(ParseError::new(
             Position::new(0, 1, 1),
             ERR_SYMBOL_LITERAL,
@@ -354,7 +355,7 @@ mod tests {
 
         assert_eq!(sexpr.symbol()(input), expected);
 
-        let input = Input::new(r#"|two words"#);
+        let input = Input::new(r"|two words");
         let expected = Err(ParseError::new(
             Span::new(Position::new(0, 1, 1), Position::new(10, 1, 11)),
             ERR_SYMBOL_CLOSING,
@@ -372,7 +373,7 @@ mod tests {
 
         assert_eq!(sexpr.symbol()(input), expected);
 
-        let input = Input::new(r#"|two\x20 words|"#);
+        let input = Input::new(r"|two\x20 words|");
         let expected = Err(ParseError::new(
             Span::new(Position::new(6, 1, 7), Position::new(8, 1, 9)),
             ERR_SYMBOL_CODE,
@@ -381,7 +382,7 @@ mod tests {
 
         assert_eq!(sexpr.symbol()(input), expected);
 
-        let input = Input::new(r#"|two\xg; words|"#);
+        let input = Input::new(r"|two\xg; words|");
         let expected = Err(ParseError::new(
             Position::new(6, 1, 7),
             ERR_SYMBOL_CODE,
@@ -390,7 +391,7 @@ mod tests {
 
         assert_eq!(sexpr.symbol()(input), expected);
 
-        let input = Input::new(r#"."#);
+        let input = Input::new(r".");
         let expected = Err(ParseError::new(
             Position::new(0, 1, 1),
             ERR_SYMBOL_SINGLE_DOT,

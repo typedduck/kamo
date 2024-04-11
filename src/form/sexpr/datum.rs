@@ -6,7 +6,7 @@ use crate::{
 use super::{code, Sexpr, SexprError};
 
 /// An enum representing a datum or a shadowed datum.
-/// 
+///
 /// This enum is returned by the
 /// [`datum_or_shadowed()`](Sexpr::datum_or_shadowed) method.
 #[derive(Clone, Debug, PartialEq, Hash)]
@@ -128,10 +128,11 @@ mod tests {
 
     use super::*;
 
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn datum_success() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned());
+        let sexpr = Sexpr::<0>::new(m.clone());
         let datum = |input| sexpr.datum()(Input::new(input));
 
         assert_eq!(datum("#t"), Ok((sexpr!(r#"#t"#), Input::new(""))));
@@ -219,13 +220,16 @@ mod tests {
         );
         assert_eq!(datum("a"), Ok((sexpr!(m, r#"a"#), Input::new(""))));
         assert_eq!(datum("a123"), Ok((sexpr!(m, r#"a123"#), Input::new(""))));
-        assert_eq!(datum("(1 2 3)"), Ok((sexpr!(m, r#"(1 2 3)"#), Input::new(""))));
+        assert_eq!(
+            datum("(1 2 3)"),
+            Ok((sexpr!(m, r#"(1 2 3)"#), Input::new("")))
+        );
     }
 
     #[test]
     fn datum_failure() {
         let m = Mutator::new_ref();
-        let sexpr = Sexpr::<0>::new(m.to_owned());
+        let sexpr = Sexpr::<0>::new(m.clone());
         let datum = |input| sexpr.datum()(Input::new(input));
 
         assert_eq!(

@@ -3,9 +3,9 @@ use std::fmt;
 use super::{Root, Trace, TARGET};
 
 /// A slot in a [`Bucket`](crate::mem::Bucket).
-/// 
+///
 /// A slot can be in one of four states:
-/// 
+///
 /// - **Undefined**: An all zero slot. Is used as a placeholder for
 ///   uninitialized slots.
 /// - **Vacant**: A slot which can be filled with a value. The `usize` is the
@@ -19,13 +19,13 @@ use super::{Root, Trace, TARGET};
 /// - **Marked**: A slot which is occupied by a value and is marked to be in
 ///   use. The `usize` is the number of locks on the slot. In the sweep phase of
 ///   the garbage collector, all marked slots are unmarked.
-/// 
+///
 /// The garbage collector uses the lock-count to determine if a slot is
 /// collectable. These are the root slots. A slot is only then collectable if it
 /// is not locked or not reachable from other slots. In the mark phase all
 /// reachable slots are marked. In the sweep phase all collectable slots are
 /// those which are occupied and have no locks.
-/// 
+///
 /// If the genric type `T` implements [`Trace`](crate::mem::Trace), then the
 /// slot will be traced in the mark phase of the garbage collector. Note that
 /// the mutator requires that all managed values must be tracable.
@@ -58,15 +58,15 @@ pub enum Slot<T: fmt::Debug> {
 impl<T: fmt::Debug> Slot<T> {
     /// Marks the slot as reachable. This is used in the mark phase of the
     /// garbage collector. Only a slot which is occupied can be marked.
-    /// 
+    ///
     /// All slots which have a lock will be marked by the garbage collector.
     /// Locked slots are the root values of the garbage collector.
     pub fn mark(&mut self) {
-        *self = match std::mem::replace(self, Slot::Undefined) {
+        *self = match std::mem::replace(self, Self::Undefined) {
             Self::Occupied(locks, value) => {
                 log::debug!(target: TARGET,
                     "Slot: marking at {:p} with {} locks",
-                    &value as *const T, locks);
+                    std::ptr::addr_of!(value), locks);
                 Self::Marked(locks, value)
             }
             slot => slot,
@@ -80,7 +80,7 @@ impl<T: fmt::Debug> Slot<T> {
             Self::Marked(locks, value) => {
                 log::debug!(target: TARGET,
                     "Slot: unmarking at {:p} with {} locks",
-                    &value as *const T, locks);
+                    std::ptr::addr_of!(value), locks);
                 Self::Occupied(locks, value)
             }
             slot => slot,
@@ -90,9 +90,9 @@ impl<T: fmt::Debug> Slot<T> {
     /// Locks the slot. This is used to prevent the garbage collector from
     /// collecting the slot while it is in use. Only a slot which is occupied
     /// or marked can be locked.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the lock-count overflows or if the slot is undefined or
     /// vacant. If this happens, then there is a bug in the garbage collector.
     pub fn lock(&mut self) {
@@ -115,9 +115,9 @@ impl<T: fmt::Debug> Slot<T> {
     /// collect the slot. A slot is only then collectable if it is not locked or
     /// not reachable from other slots. Only a slot which is occupied or marked
     /// can be unlocked.
-    /// 
+    ///
     /// # Panics
-    /// 
+    ///
     /// Panics if the lock-count underflows or if the slot is undefined or
     /// vacant. If this happens, then there is a bug in the garbage collector.
     pub fn unlock(&mut self) {
@@ -141,8 +141,7 @@ impl<T: fmt::Debug> Slot<T> {
     #[inline]
     pub const fn value(&self) -> Option<&T> {
         match self {
-            Self::Marked(_, value) => Some(value),
-            Self::Occupied(_, value) => Some(value),
+            Self::Marked(_, value) | Self::Occupied(_, value) => Some(value),
             _ => None,
         }
     }
@@ -152,31 +151,34 @@ impl<T: fmt::Debug> Slot<T> {
     #[inline]
     pub fn value_mut(&mut self) -> Option<&mut T> {
         match self {
-            Self::Marked(_, value) => Some(value),
-            Self::Occupied(_, value) => Some(value),
+            Self::Marked(_, value) | Self::Occupied(_, value) => Some(value),
             _ => None,
         }
     }
 
     /// Returns `true` if the slot is undefined.
+    #[must_use]
     #[inline]
     pub const fn is_undefined(&self) -> bool {
         matches!(self, Self::Undefined)
     }
 
     /// Returns `true` if the slot is vacant.
+    #[must_use]
     #[inline]
     pub const fn is_vacant(&self) -> bool {
         matches!(self, Self::Vacant(_))
     }
 
     /// Returns `true` if the slot is occupied or marked.
+    #[must_use]
     #[inline]
     pub const fn is_occupied(&self) -> bool {
         matches!(self, Self::Occupied(_, _) | Self::Marked(_, _))
     }
 
     /// Returns `true` if the slot is marked.
+    #[must_use]
     #[inline]
     pub const fn is_marked(&self) -> bool {
         matches!(self, Self::Marked(_, _))
@@ -184,6 +186,7 @@ impl<T: fmt::Debug> Slot<T> {
 
     /// Returns `true` if the slot is locked. Only a slot which is occupied or
     /// marked can be locked.
+    #[must_use]
     #[inline]
     pub const fn is_locked(&self) -> bool {
         matches!(self, Self::Occupied(locks, _) | Self::Marked(locks, _) if *locks > 0)
@@ -193,6 +196,7 @@ impl<T: fmt::Debug> Slot<T> {
     /// occupied and has no locks can be collected. In the sweep phase of the
     /// garbage collector this is true for all slots which where not reached by
     /// the mark phase.
+    #[must_use]
     #[inline]
     pub const fn is_collectable(&self) -> bool {
         matches!(self, Self::Occupied(locks, _) if *locks == 0)
@@ -203,7 +207,7 @@ impl<'a, T: Trace<'a> + fmt::Debug> Trace<'a> for Slot<T> {
     #[inline]
     fn trace(&self, traced: &mut Vec<Root<'a>>) {
         if let Some(value) = self.value() {
-            value.trace(traced)
+            value.trace(traced);
         }
     }
 }
@@ -222,8 +226,8 @@ impl<T: PartialEq + fmt::Debug> PartialEq for Slot<T> {
         match (self, other) {
             (Self::Undefined, Self::Undefined) => true,
             (Self::Vacant(a), Self::Vacant(b)) => a == b,
-            (Self::Occupied(_, a), Self::Occupied(_, b)) => a == b,
-            (Self::Marked(_, a), Self::Marked(_, b)) => a == b,
+            (Self::Occupied(_, a), Self::Occupied(_, b))
+            | (Self::Marked(_, a), Self::Marked(_, b)) => a == b,
             _ => false,
         }
     }
@@ -241,6 +245,7 @@ mod tests {
         assert_eq!(format!("{:?}", Slot::Marked(0, 42)), "Marked(0, 42)");
     }
 
+    #[allow(clippy::cognitive_complexity)]
     #[test]
     fn slot() {
         let mut slot = Slot::<u32>::default();

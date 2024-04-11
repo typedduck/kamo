@@ -23,6 +23,15 @@ where
 {
     /// The `parse_any` method is used to parse a choice of multiple parsers
     /// and returns the result of the first parser which succeeds.
+    ///
+    /// # Errors
+    ///
+    /// If all parsers fail, an error is returned indicating that no parser
+    /// matched. If one of the parsers hits the end of the input, and end of
+    /// file cause is appended to the error.
+    ///
+    /// If a parser fails or flags a semantic error, the error of that element
+    /// is returned.
     fn parse_any(&mut self, input: Input<'a>) -> ParseResult<'a, O>;
 }
 
@@ -145,13 +154,13 @@ mod tests {
 
     #[test]
     fn any_0() {
-        let (_, input) = any(())(Input::new("abc")).expect("valid output");
+        let ((), input) = any(())(Input::new("abc")).expect("valid output");
 
         assert_eq!(input, Input::from("abc"));
         assert_eq!(input.current(), Some('a'));
         assert_eq!(input.position(), Position::new(0, 1, 1));
 
-        let (_, input) = any(())(Input::new("")).expect("valid output");
+        let ((), input) = any(())(Input::new("")).expect("valid output");
 
         assert_eq!(input, Input::from(""));
         assert_eq!(input.current(), None);

@@ -5,6 +5,7 @@ mod delimited;
 pub use delimited::*;
 
 mod error;
+#[allow(clippy::module_name_repetitions)]
 pub use error::SequenceError;
 
 mod folded_list;

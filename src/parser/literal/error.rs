@@ -1,6 +1,7 @@
 use std::fmt;
 
 /// Definition of the error messages of the literal parsers.
+#[allow(clippy::module_name_repetitions)]
 pub enum LiteralError {
     /// Expecting a floating-point number.
     Float,
@@ -35,17 +36,14 @@ pub enum LiteralError {
 impl fmt::Display for LiteralError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Float => write!(f, "expecting a floating-point number"),
-            Self::FloatFormat => write!(f, "expecting a floating-point number"),
+            Self::Float | Self::FloatFormat => write!(f, "expecting a floating-point number"),
             Self::ExponentFormat => write!(f, "expecting an exponent"),
-            Self::Integer => write!(f, "expecting an integer number"),
-            Self::IntegerFormat => write!(f, "expecting an integer number"),
-            Self::Natural => write!(f, "expecting a natural number"),
-            Self::NaturalFormat => write!(f, "expecting a natural number"),
+            Self::Integer | Self::IntegerFormat => write!(f, "expecting an integer number"),
+            Self::Natural | Self::NaturalFormat => write!(f, "expecting a natural number"),
             Self::SingleEscapeCode => write!(f, "malformed single escape code: ['\"\\\\abednrt0]"),
             Self::AsciiEscapeCode => write!(f, "malformed ascii escape code: x[0-7][0-9A-Fa-f]"),
             Self::UnicodeEscapeCode => write!(f, "malformed unicode escape code: u{{[0-9A-Fa-f]{{1-6}}}}"),
-            Self::UnicodeChar(code) => write!(f, "invalid unicode character: 0x{:x}", code),
+            Self::UnicodeChar(code) => write!(f, "invalid unicode character: 0x{code:x}"),
             Self::Escape => write!(f, "expecting escape sequence: ['\"\\\\abednrt0] | x[0-7][0-9A-Fa-f] | u{{[0-9A-Fa-f]{{1-6}}}}"),
             Self::EscapePart => write!(f, "expecting escape sequence part: ['\"\\\\abednrt0] | x[0-7][0-9A-Fa-f] | u{{[0-9A-Fa-f]{{1-6}}}}"),
             Self::QuotedChar => write!(f, "expecting quoted character: \"'\" ( <is_char_quotable> | EscapedChar ) \"'\""),

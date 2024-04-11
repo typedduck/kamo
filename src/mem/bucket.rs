@@ -56,6 +56,7 @@ pub struct Bucket<'a, T: fmt::Debug, const N: usize> {
 
 impl<'a, T: fmt::Debug, const N: usize> Bucket<'a, T, N> {
     /// Creates a new bucket.
+    #[must_use]
     pub fn new() -> Box<Self> {
         log::debug!(target: TARGET,
             "Bucket: new bucket of {} with capacity of {} values",
@@ -97,8 +98,8 @@ impl<'a, T: fmt::Debug, const N: usize> Bucket<'a, T, N> {
     /// bucket and the entry is occupied.
     pub fn is_valid_pointer(&self, ptr: NonNull<Slot<T>>) -> bool {
         let addr = ptr.as_ptr() as usize;
-        let start = &self.entries[0] as *const _ as usize;
-        let end = &self.entries[N - 1] as *const _ as usize;
+        let start = std::ptr::addr_of!(self.entries[0]) as usize;
+        let end = std::ptr::addr_of!(self.entries[N - 1]) as usize;
 
         if addr >= start && addr <= end && (addr - start) % size_of::<Slot<T>>() == 0 {
             unsafe { ptr.as_ref() }.is_occupied()
@@ -110,6 +111,12 @@ impl<'a, T: fmt::Debug, const N: usize> Bucket<'a, T, N> {
     /// Allocates a new entry in the bucket and returns a pointer to the entry.
     /// Returns `None` if the bucket is full. The [`Mutator`] must be the owner
     /// of the bucket.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the bucket is full and cannot allocate a new entry. It is the
+    /// responsibility of the caller to ensure that the bucket is not full.
+    #[must_use]
     pub fn alloc(&mut self, value: T) -> Option<Pointer<'a, T>> {
         if self.len == N {
             log::debug!(target: TARGET, "Bucket: full, cannot allocate");
@@ -126,7 +133,7 @@ impl<'a, T: fmt::Debug, const N: usize> Bucket<'a, T, N> {
         self.len += 1;
         log::debug!(target: TARGET,
             "Bucket: allocated value at index 0x{:x}, {:p}",
-            index, &mut self.entries[0] as *mut _);
+            index, std::ptr::addr_of_mut!(self.entries[0]));
 
         let ptr = NonNull::new(&mut self.entries[index]).expect("null-pointer");
         let ptr = unsafe { Pointer::new_unchecked(ptr) };
@@ -152,7 +159,7 @@ impl<'a, T: Trace<'a> + fmt::Debug, const N: usize> Bucket<'a, T, N> {
         let pending_len = pending.len();
 
         // Mark all roots and collect pending objects
-        for entry in self.entries.iter_mut() {
+        for entry in &mut self.entries {
             if entry.is_marked() {
                 continue;
             }
@@ -229,7 +236,7 @@ mod tests {
         let mut bucket = Bucket::<String, 512>::new();
 
         for i in 0..512 {
-            let value = bucket.alloc(format!("String {}", i));
+            let value = bucket.alloc(format!("String {i}"));
 
             assert_eq!(
                 value,
@@ -238,15 +245,9 @@ mod tests {
             assert_eq!(bucket.len(), i + 1);
             assert_eq!(bucket.available(), 511 - i);
             assert_eq!(bucket.next, i + 1);
-            assert_eq!(
-                bucket.entries[i],
-                Slot::Occupied(1, format!("String {}", i))
-            );
+            assert_eq!(bucket.entries[i], Slot::Occupied(1, format!("String {i}")));
         }
         assert!(bucket.is_full());
         assert!(!bucket.is_empty());
     }
-
-    #[test]
-    fn mark_sweep() {}
 }
