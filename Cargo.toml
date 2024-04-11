@@ -19,13 +19,30 @@ keywords = [
     "garbage-collection",
 ]
 readme = "README.md"
-include = ["LICENSE-*", "README.md", "CHANGELOG.md", "Cargo.toml", "/src", "/tests"]
+include = [
+    "LICENSE-*",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "/src",
+    "/tests",
+]
 
 [profile.release]
 strip = "symbols"
 opt-level = 3
 lto = "fat"
 codegen-units = 1
+
+[lints.clippy]
+pedantic = "warn"
+cargo = "warn"
+style = "warn"
+complexity = "warn"
+perf = "warn"
+correctness = "warn"
+suspicious = "warn"
+nursery = "warn"
 
 [dependencies]
 kamo-macros = { version = "0.1.0", optional = true }
