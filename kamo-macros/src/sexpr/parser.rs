@@ -12,7 +12,7 @@ mod tests {
     use super::*;
     use pest::Parser;
 
-    include!("../../tests/atoms.in");
+    include!("../../tests/includes/atoms.in");
 
     #[test]
     fn parse_atoms() {
@@ -33,7 +33,7 @@ mod tests {
         }
     }
 
-    include!("../../tests/compounds.in");
+    include!("../../tests/includes/compounds.in");
 
     #[test]
     fn parse_compounds() {

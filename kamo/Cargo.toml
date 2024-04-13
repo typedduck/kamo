@@ -39,7 +39,7 @@ suspicious = "warn"
 nursery = "warn"
 
 [dependencies]
-kamo-macros = { version = "0.1.0", optional = true }
+kamo-macros = { version = "0.1.0", path = "../kamo-macros", optional = true }
 log = { version = "0.4.20", features = [
     "std",
     "release_max_level_info",
@@ -52,7 +52,7 @@ smartstring = "1.0.1"
 unicode-ident = "1.0.12"
 
 [dev-dependencies]
-kamo-macros = "0.1.0"
+kamo-macros = { version = "0.1.0", path = "../kamo-macros" }
 
 [features]
 macros = ["dep:kamo-macros"]
