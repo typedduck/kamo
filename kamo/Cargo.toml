@@ -25,7 +25,8 @@ include = [
     "CHANGELOG.md",
     "Cargo.toml",
     "/src",
-    "/tests",
+    "/tests/macros",
+    "/tests/sexpr",
 ]
 
 [lints.clippy]
