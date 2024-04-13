@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.8.1](https://github.com/typedduck/kamo/tree/kamo-v0.8.1) - 2024-04-13
+
+* Merge kamo-macros into the main crate. There will be no separate repository for
+  the macros. The repository `kamo-macros` will be archived.
+
 ## [0.8.0](https://github.com/typedduck/kamo/tree/v0.8.0) - 2024-04-11
 
 * Refactor after activating pedantic linting. Must changes are in the
