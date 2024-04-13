@@ -198,9 +198,9 @@ mod tests {
     #[test]
     fn sexpr_file_success() {
         let sexprs = [
-            (quote! { m, "tests/sexpr/empty.scm" }, quote! { [] }),
+            (quote! { m, "tests/macros/empty.scm" }, quote! { [] }),
             (
-                quote! { m, "tests/sexpr/values.scm" },
+                quote! { m, "tests/macros/values.scm" },
                 quote! { [Value::new_nil(), Value::new_int(100i64), Value::new_bool(true)] },
             ),
         ];

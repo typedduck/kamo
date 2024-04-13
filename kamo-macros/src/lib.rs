@@ -79,14 +79,14 @@
 //! use kamo::{sexpr_file, value::{print, Value}};
 //!  
 //! let m = Mutator::new_ref();
-//! let values: &[Value] = &sexpr_file!(m, "tests/sexpr/values.scm");
+//! let values: &[Value] = &sexpr_file!(m, "tests/macros/values.scm");
 //!  
 //! assert_eq!(values.len(), 3);
 //! assert_eq!(print(values[0].clone()).to_string(), "()");
 //! assert_eq!(print(values[1].clone()).to_string(), "100");
 //! assert_eq!(print(values[2].clone()).to_string(), "#t");
 //!
-//! let values: &[Value] = &sexpr_file!("tests/sexpr/empty.scm");
+//! let values: &[Value] = &sexpr_file!("tests/macros/empty.scm");
 //! assert_eq!(values.len(), 0);
 //! ```
 //!  
@@ -158,14 +158,14 @@ pub fn sexpr(input: TokenStream) -> TokenStream {
 /// ```ignore
 /// use kamo::{sexpr_file, value::{print, Value}};
 ///  
-/// let values: &[Value] = &sexpr_file!(m, "tests/sexpr/values.scm");
+/// let values: &[Value] = &sexpr_file!(m, "tests/macros/values.scm");
 ///  
 /// assert_eq!(values.len(), 3);
 /// assert_eq!(print(values[0].clone()).to_string(), "()");
 /// assert_eq!(print(values[1].clone()).to_string(), "100");
 /// assert_eq!(print(values[2].clone()).to_string(), "#t");
 ///
-/// let values: &[Value] = &sexpr_file!("tests/sexpr/empty.scm");
+/// let values: &[Value] = &sexpr_file!("tests/macros/empty.scm");
 /// assert_eq!(values.len(), 0);
 /// ```
 #[proc_macro]
