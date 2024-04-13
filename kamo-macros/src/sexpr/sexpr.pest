@@ -1,0 +1,97 @@
+WHITESPACE      = _{ " " | "\t" | NEWLINE }
+COMMENT         = _{ comment_line | comment_nested }
+comment_line    =  { ";" ~ (!NEWLINE ~ ANY)* ~ (NEWLINE | EOI) }
+comment_nested  =  { "#|" ~ comment_text  ~ comment_cont* ~ "|#" }
+comment_text    =  { (!("#|" | "|#") ~ ANY)* }
+comment_cont    =  { comment_nested ~ comment_text }
+
+// Boolean literals
+boolean = @{ "#true" | "#t" | "#false" | "#f" }
+
+// Character literals
+character      = ${ "#\\"  ~ character_name
+                  | "#\\x" ~ character_code
+                  | "#\\"  ~ character_any }
+character_any  = @{ ANY }
+character_code = @{ ASCII_HEX_DIGIT{1,6} }
+character_name = @{ "alarm" | "backspace" | "delete" | "escape" | "newline"
+                  | "null" | "return" | "space" | "tab" }
+
+// Number literals
+number               = ${ number_binary
+                        | number_octal
+                        | number_hexdec
+                        | number_decimal
+                        | decimal
+                        | infnan }
+number_binary        = ${ "#b" ~ (number_binary_digits | infnan) }
+number_binary_digits = @{ sign? ~ ASCII_BIN_DIGIT+ }
+number_octal         = ${ "#o" ~ (number_octal_digits  | infnan) }
+number_octal_digits  = @{ sign? ~ ASCII_OCT_DIGIT+ }
+number_decimal       = ${ "#d" ~ (decimal | infnan) }
+number_hexdec        = ${ "#x" ~ (number_hexdec_digits | infnan) }
+number_hexdec_digits = @{ sign? ~ ASCII_HEX_DIGIT+ }
+
+// Decimal literals
+decimal          = ${ sign? ~ ( decimal_digits ~ (decimal_fraction | decimal_suffix)?
+                              | decimal_fraction ) }
+decimal_fraction = @{ "." ~ decimal_digits ~ decimal_suffix? }
+decimal_digits   = @{ ASCII_DIGIT+ }
+decimal_suffix   = @{ ( "e" | "E" ) ~ sign? ~ decimal_digits }
+
+// String literals
+string          = ${ "\"" ~ string_element* ~ "\"" }
+string_element  = _{ string_escape
+                   | string_text }
+string_text     = @{ string_char+ }
+string_escape   = ${ "\\" ~ (string_ilws | string_mnemonic | string_hexcode) }
+string_mnemonic =  { "\"" | "\\" | "a" | "b" | "t" | "n" | "r" }
+string_hexcode  = _{ "x" ~ character_code ~ ";" }
+string_char     = @{ !("\"" | "\\") ~ ANY }
+string_ilws     = @{ (" " | "\t")* ~ NEWLINE ~ (" " | "\t")* }
+
+// Symbol literals
+symbol                 = ${ symbol_initial ~ symbol_subseq*
+                          | symbol_peculiar
+                          | "|" ~ symbol_element* ~ "|" }
+symbol_initial         = _{ ASCII_ALPHA | symbol_special_initial }
+symbol_subseq          = _{ symbol_initial | ASCII_DIGIT
+                          | symbol_special_subseq }
+symbol_special_initial = _{ "!" | "$" | "%" | "&" | "*" | "/" | ":"
+                          | "<" | "=" | ">" | "?" | "^" | "_" | "~" }
+symbol_special_subseq  = _{ "+" | "-" | "." | "@" }
+symbol_peculiar        = _{ ("+" | "-") ~ ( symbol_sign_subseq ~ symbol_subseq*
+                                          | "." ~ symbol_dot_subseq ~ symbol_subseq* )?
+                          | "." ~ symbol_dot_subseq ~ symbol_subseq* }
+symbol_sign_subseq     = _{ symbol_initial | "+" | "-" | "@" }
+symbol_dot_subseq      = _{ symbol_sign_subseq | "." }
+symbol_element         = _{ symbol_escape | symbol_text }
+symbol_text            = @{ symbol_char+ }
+symbol_mnemonic        =  { "|" | "\"" | "\\" | "a" | "b" | "t" | "n" | "r" }
+symbol_char            = @{ !("|" | "\\") ~ ANY }
+symbol_escape          = ${ "\\" ~ (symbol_mnemonic | string_hexcode | "|") }
+
+// Byte-vector literals
+bytevector = { "#u8(" ~ number* ~ ")" }
+
+// Vector literals
+vector = { "#(" ~ datum* ~ ")" }
+
+// List literals
+list   = { "(" ~ (datum+ ~ dotted?)? ~ ")" }
+dotted = { "." ~ datum }
+
+// Abbreviations
+abbrev        = { abbrev_prefix ~ datum }
+abbrev_prefix = { "'" | "`" | ",@" | "," }
+
+// Helper rules
+sign   = { "+" | "-" }
+infnan = { "+inf.0" | "-inf.0" | "+nan.0" | "-nan.0" }
+
+// Main rules: S-Expressions
+datum    = _{ abbrev | vector | list | boolean | character
+            | number | symbol | bytevector | string }
+shadowed =  { "#;" ~ datum }
+sexpr    = _{ SOI ~ datum ~ EOI }
+script   = _{ SOI ~ (shadowed | datum)* ~ EOI }

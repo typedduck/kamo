@@ -1,0 +1,43 @@
+# See more keys and their definitions at
+# https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name = "kamo-macros"
+version = "0.1.5"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["TypedDuck <typedduck@posteo.net>"]
+homepage = "https://github.com/typedduck/kamo-macros"
+repository = "https://github.com/typedduck/kamo-macros"
+description = "A macro for parsing s-expressions into kamo Values."
+categories = ["parser-implementations"]
+keywords = ["s-expression", "scheme", "lisp", "parser", "macros"]
+readme = "README.md"
+include = [
+    "LICENSE-*",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.toml",
+    "/src",
+    "/tests",
+]
+
+[lints.clippy]
+pedantic = "warn"
+cargo = "warn"
+style = "warn"
+complexity = "warn"
+perf = "warn"
+correctness = "warn"
+suspicious = "warn"
+nursery = "warn"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+pest = "2.7.6"
+pest_derive = "2.7.6"
+proc-macro2 = "1.0.75"
+quote = "1.0.35"
+syn = "2.0.48"
