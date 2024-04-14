@@ -1,6 +1,9 @@
 use std::{collections::HashSet, fmt};
 use unicode_ident::{is_xid_continue, is_xid_start};
 
+#[cfg(feature = "types")]
+use crate::types::Type;
+
 use super::{Pair, Value, Vector, Visitor};
 
 /// This function prints a value on a single line. It formats the value in a
@@ -248,6 +251,11 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
             }
         }
         write!(self.0, ")")
+    }
+
+    #[cfg(feature = "types")]
+    fn visit_type(&mut self, value: &Type) -> Self::Result {
+        write!(self.0, "#<type {value}>")
     }
 }
 

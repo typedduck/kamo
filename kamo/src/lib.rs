@@ -350,9 +350,17 @@
 //! is implemented as a library on top of the `kamo` modules. It implements a
 //! subset of the R7RS standard.
 
+#[cfg(feature = "types")]
+#[macro_use]
+extern crate lazy_static;
+
+#[cfg(feature = "types")]
+pub mod env;
 pub mod form;
 pub mod mem;
 pub mod parser;
+#[cfg(feature = "types")]
+pub mod types;
 pub mod value;
 
 mod position;

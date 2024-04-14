@@ -1,5 +1,7 @@
 use std::{cell::RefCell, collections::BTreeMap, fmt, ops::Deref, ptr::NonNull, rc::Rc};
 
+#[cfg(feature = "types")]
+use crate::types::Type;
 use crate::{
     mem::TARGET,
     value::{ByteVector, Pair, SmartString, Value, Vector},
@@ -108,6 +110,8 @@ pub struct Mutator<'a> {
     symbol_map: BTreeMap<&'a str, NonNull<Slot<Box<str>>>>,
     symbols: Arena<'a, Box<str>, BUCKET_DEFAULT_SIZE>,
     vectors: Arena<'a, Vector<'a>, BUCKET_SMALL_SIZE>,
+    #[cfg(feature = "types")]
+    types: Arena<'a, Type, BUCKET_SMALL_SIZE>,
     allocations: usize,
     allocation_pressure: usize,
     garbage_collections: usize,
@@ -124,6 +128,8 @@ impl<'a> Mutator<'a> {
             strings: Arena::new(),
             symbols: Arena::new(),
             vectors: Arena::new(),
+            #[cfg(feature = "types")]
+            types: Arena::new(),
             symbol_map: BTreeMap::new(),
             allocations: 0,
             allocation_pressure: 0,
@@ -151,6 +157,8 @@ impl<'a> Mutator<'a> {
             + self.strings.len()
             + self.symbols.len()
             + self.vectors.len();
+        #[cfg(feature = "types")]
+        let len = len + self.types.len();
 
         len
     }
@@ -164,6 +172,8 @@ impl<'a> Mutator<'a> {
             + self.strings.capacity()
             + self.symbols.capacity()
             + self.vectors.capacity();
+        #[cfg(feature = "types")]
+        let capacity = capacity + self.types.capacity();
 
         capacity
     }
@@ -177,6 +187,8 @@ impl<'a> Mutator<'a> {
             + self.strings.available()
             + self.symbols.available()
             + self.vectors.available();
+        #[cfg(feature = "types")]
+        let available = available + self.types.available();
 
         available
     }
@@ -192,6 +204,8 @@ impl<'a> Mutator<'a> {
             allocated_symbols: self.symbols.len(),
             allocated_pairs: self.pairs.len(),
             allocated_vectors: self.vectors.len(),
+            #[cfg(feature = "types")]
+            allocated_types: self.types.len(),
             allocations: self.allocations,
             allocation_pressure: self.allocation_pressure,
             garbage_collections: self.garbage_collections,
@@ -207,6 +221,8 @@ impl<'a> Mutator<'a> {
             && self.strings.is_empty()
             && self.symbols.is_empty()
             && self.vectors.is_empty();
+        #[cfg(feature = "types")]
+        let empty = empty && self.types.is_empty();
 
         empty
     }
@@ -299,6 +315,16 @@ impl<'a> Mutator<'a> {
         value
     }
 
+    #[cfg(feature = "types")]
+    pub fn new_type(&mut self, value: Type) -> Pointer<'a, Type> {
+        self.on_allocate();
+
+        let value = self.types.alloc(value);
+
+        log::debug!(target: TARGET, "Mutator: new type {:p}", value.as_ptr());
+        value
+    }
+
     /* #endregion */
 
     /* #region Coercion */
@@ -355,6 +381,14 @@ impl<'a> Mutator<'a> {
             .then(|| Pointer::new(raw))
     }
 
+    #[cfg(feature = "types")]
+    /// Coerces the raw pointer into a valid type pointer. Returns `None` if
+    /// the pointer is not valid.
+    #[inline]
+    pub fn into_type(&mut self, raw: NonNull<Slot<Type>>) -> Option<Pointer<'a, Type>> {
+        self.types.is_valid_pointer(raw).then(|| Pointer::new(raw))
+    }
+
     /* #endregion */
 
     /* #region MemoryManagement */
@@ -409,12 +443,18 @@ impl<'a> Mutator<'a> {
         self.strings.mark(&mut pending);
         self.symbols.mark(&mut pending);
         self.vectors.mark(&mut pending);
+        #[cfg(feature = "types")]
+        self.types.mark(&mut pending);
 
         log::debug!(target: TARGET, "Mutator: marking pending values");
         Self::mark_pending(pending);
 
         // Sweeping phase
         log::debug!(target: TARGET, "Mutator: sweeping arenas");
+        #[cfg(feature = "types")]
+        {
+            collected += self.types.sweep();
+        }
         collected += self.vectors.sweep();
         collected += self.symbols.sweep_and(|key| {
             let key = key.value().expect("not occupied").as_ref();
@@ -435,6 +475,8 @@ impl<'a> Mutator<'a> {
                 Root::Bytevec(mut value) => unsafe { value.as_mut() }.mark(),
                 Root::String(mut value) => unsafe { value.as_mut() }.mark(),
                 Root::Symbol(mut value) => unsafe { value.as_mut() }.mark(),
+                #[cfg(feature = "types")]
+                Root::Type(mut value) => unsafe { value.as_mut() }.mark(),
                 Root::Pair(mut value) => {
                     let entry = unsafe { value.as_mut() };
 
@@ -485,6 +527,8 @@ impl<'a> Mutator<'a> {
             + (self.strings.capacity() / 2)
             + (self.symbols.capacity() / 2)
             + (self.vectors.capacity() / 2);
+        #[cfg(feature = "types")]
+        let pressure = pressure + (self.types.capacity() / 2);
 
         self.allocations = 0;
         self.allocation_pressure = pressure.clamp(MIN_ALLOCATION_PRESSURE, MAX_ALLOCATION_PRESSURE);
@@ -520,6 +564,8 @@ impl<'a> fmt::Debug for Mutator<'a> {
             .field("strings", &self.strings)
             .field("symbols", &self.symbols)
             .field("vectors", &self.vectors);
+        #[cfg(feature = "types")]
+        let out = out.field("types", &self.types);
 
         out.field("symbol_map", &self.symbol_map)
             .field("allocations", &self.allocations)
@@ -539,5 +585,7 @@ impl<'a> Drop for Mutator<'a> {
         self.strings.drop_all();
         self.symbols.drop_all();
         self.vectors.drop_all();
+        #[cfg(feature = "types")]
+        self.types.drop_all();
     }
 }

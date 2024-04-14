@@ -1,5 +1,7 @@
 use std::ptr::NonNull;
 
+#[cfg(feature = "types")]
+use crate::types::Type;
 use crate::{
     mem::{MutatorRef, Pointer, Slot},
     value::SmartString,
@@ -58,6 +60,11 @@ impl ValueId {
                 let ptr = NonNull::new(self.1 as *mut Slot<Pair<'_>>)?;
                 Some(m.borrow_mut().into_pair(ptr)?.into())
             }
+            #[cfg(feature = "types")]
+            ValueTag::Type => {
+                let ptr = NonNull::new(self.1 as *mut Slot<Type>)?;
+                Some(m.borrow_mut().into_type(ptr)?.into())
+            }
         }
     }
 
@@ -84,6 +91,8 @@ impl From<&Value<'_>> for ValueId {
             ValueKind::Bytevec(_, value) => Self(ValueTag::Bytevec, value.as_ptr() as u64),
             ValueKind::Vector(_, value) => Self(ValueTag::Vector, value.as_ptr() as u64),
             ValueKind::Pair(_, value) => Self(ValueTag::Pair, value.as_ptr() as u64),
+            #[cfg(feature = "types")]
+            ValueKind::Type(_, value) => Self(ValueTag::Type, value.as_ptr() as u64),
         }
     }
 }
@@ -123,6 +132,14 @@ impl From<&Pointer<'_, Pair<'_>>> for ValueId {
     }
 }
 
+#[cfg(feature = "types")]
+impl From<&Pointer<'_, Type>> for ValueId {
+    #[inline]
+    fn from(ptr: &Pointer<'_, Type>) -> Self {
+        Self(ValueTag::Type, ptr.as_ptr() as u64)
+    }
+}
+
 /// A tag that identifies the type of a [`Value`].
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -137,6 +154,8 @@ pub enum ValueTag {
     Bytevec,
     Vector,
     Pair,
+    #[cfg(feature = "types")]
+    Type,
 }
 
 #[cfg(test)]

@@ -1,5 +1,7 @@
 use std::ptr::NonNull;
 
+#[cfg(feature = "types")]
+use crate::types::Type;
 use crate::value::{ByteVector, Pair, SmartString, Vector};
 
 use super::Slot;
@@ -99,6 +101,9 @@ pub enum Root<'a> {
     Pair(NonNull<Slot<Pair<'a>>>),
     /// A pointer to a slot that contains a [`Vector`].
     Vector(NonNull<Slot<Vector<'a>>>),
+    #[cfg(feature = "types")]
+    /// A pointer to a slot that contains a [`Type`].
+    Type(NonNull<Slot<Type>>),
 }
 
 impl<'a> ToRoot<'a> for Root<'a> {

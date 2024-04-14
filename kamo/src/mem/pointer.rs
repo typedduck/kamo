@@ -5,6 +5,8 @@ use std::{
     ptr::NonNull,
 };
 
+#[cfg(feature = "types")]
+use crate::types::Type;
 use crate::value::{ByteVector, Pair, SmartString, ValueId, Vector};
 
 use super::{Mutator, Root, Slot, Trace};
@@ -336,6 +338,22 @@ impl<'a> From<NonNull<Slot<Vector<'a>>>> for Pointer<'a, Vector<'a>> {
     /// entry is occupied.
     #[inline]
     fn from(ptr: NonNull<Slot<Vector<'a>>>) -> Self {
+        Self::new(ptr)
+    }
+}
+
+#[cfg(feature = "types")]
+impl<'a> From<NonNull<Slot<Type>>> for Pointer<'a, Type> {
+    /// Creates a new pointer to the given [`NonNull<Slot<Type>>`](Slot)
+    /// pointer and locks the entry.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the entry cannot be locked. This happens if the entry is
+    /// unoccupied. It is the responsibility of the caller to ensure that the
+    /// entry is occupied.
+    #[inline]
+    fn from(ptr: NonNull<Slot<Type>>) -> Self {
         Self::new(ptr)
     }
 }

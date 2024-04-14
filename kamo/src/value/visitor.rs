@@ -1,3 +1,6 @@
+#[cfg(feature = "types")]
+use crate::types::Type;
+
 use super::{Pair, Vector};
 
 /// A trait for visiting values.
@@ -61,4 +64,8 @@ pub trait Visitor {
     /// should check if the vector has already been visited and if so, return
     /// early.
     fn visit_vector(&mut self, value: &Vector<'_>) -> Self::Result;
+    #[cfg(feature = "types")]
+    /// Visit if the value is `Value::Type`. Is only available if the `types`
+    /// feature is enabled.
+    fn visit_type(&mut self, value: &Type) -> Self::Result;
 }

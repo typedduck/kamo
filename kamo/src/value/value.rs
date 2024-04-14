@@ -2,6 +2,8 @@ use std::{fmt, marker::PhantomData, ptr::NonNull};
 
 use smallvec::SmallVec;
 
+#[cfg(feature = "types")]
+use crate::types::Type;
 use crate::{
     mem::{Mutator, MutatorRef, Pointer, Root, ToRoot},
     value::SmartString,
@@ -75,6 +77,16 @@ impl<'a> Value<'a> {
     #[inline]
     pub const fn new_float(value: f64) -> Self {
         Self::new(ValueKind::Float(value))
+    }
+
+    #[cfg(feature = "types")]
+    /// Creates a new type.
+    #[allow(clippy::needless_pass_by_value)]
+    #[must_use]
+    #[inline]
+    pub fn new_type(m: MutatorRef<'a>, ty: Type) -> Self {
+        let ty = m.borrow_mut().new_type(ty);
+        ty.into()
     }
 
     /// Creates a new symbol.
@@ -536,6 +548,30 @@ impl<'a> Value<'a> {
         }
     }
 
+    #[cfg(feature = "types")]
+    /// If the value is a type, returns it as a [`Type`]. Otherwise, returns
+    /// `None`.
+    #[must_use]
+    #[inline]
+    pub const fn as_type(&self) -> Option<&Type> {
+        match self.inner {
+            ValueKind::Type(_, ptr) => unsafe { ptr.as_ref() }.value(),
+            _ => None,
+        }
+    }
+
+    #[cfg(feature = "types")]
+    /// If the value is a type, returns it as a `Pointer<'a, Type>`. Otherwise,
+    /// returns `None`.
+    #[must_use]
+    #[inline]
+    pub fn as_type_ptr(&self) -> Option<Pointer<'a, Type>> {
+        match self.inner {
+            ValueKind::Type(_, ptr) => Some(ptr.into()),
+            _ => None,
+        }
+    }
+
     /// Returns the inner value.
     #[must_use]
     #[inline]
@@ -638,6 +674,14 @@ impl<'a> Value<'a> {
         matches!(self.inner, ValueKind::Vector(_, _))
     }
 
+    #[cfg(feature = "types")]
+    /// Returns `true` if the value is a type.
+    #[must_use]
+    #[inline]
+    pub const fn is_type(&self) -> bool {
+        matches!(self.inner, ValueKind::Type(_, _))
+    }
+
     /// Returns `true` if the value is an atom, or rather not a pair.
     #[must_use]
     #[inline]
@@ -702,6 +746,8 @@ impl<'a> Value<'a> {
             ValueKind::Symbol(_, _) => ValueTag::Symbol,
             ValueKind::Bytevec(_, _) => ValueTag::Bytevec,
             ValueKind::Vector(_, _) => ValueTag::Vector,
+            #[cfg(feature = "types")]
+            ValueKind::Type(_, _) => ValueTag::Type,
         }
     }
 
@@ -782,6 +828,14 @@ impl<'a> Value<'a> {
 
                 visitor.visit_vector(vector)
             }
+            #[cfg(feature = "types")]
+            ValueKind::Type(_, ptr) => {
+                let ty = unsafe { ptr.as_ref() }
+                    .value()
+                    .expect("invalid type pointer");
+
+                visitor.visit_type(ty)
+            }
         }
     }
 
@@ -826,6 +880,13 @@ impl<'a> Value<'a> {
                     *locked = false;
                 }
             }
+            #[cfg(feature = "types")]
+            ValueKind::Type(locked, ptr) => {
+                if *locked {
+                    unsafe { ptr.as_mut() }.unlock();
+                    *locked = false;
+                }
+            }
         }
     }
 
@@ -862,6 +923,13 @@ impl<'a> Value<'a> {
                 }
             }
             ValueKind::Vector(locked, ptr) => {
+                if !*locked {
+                    unsafe { ptr.as_mut() }.lock();
+                    *locked = true;
+                }
+            }
+            #[cfg(feature = "types")]
+            ValueKind::Type(locked, ptr) => {
                 if !*locked {
                     unsafe { ptr.as_mut() }.lock();
                     *locked = true;
@@ -920,6 +988,14 @@ impl<'a> From<Pointer<'a, Box<str>>> for Value<'a> {
     }
 }
 
+#[cfg(feature = "types")]
+impl<'a> From<Pointer<'a, Type>> for Value<'a> {
+    fn from(ptr: Pointer<'a, Type>) -> Self {
+        let ptr = NonNull::new(unsafe { ptr.into_raw() }).expect("null-pointer");
+        Self::new(ValueKind::Type(true, ptr))
+    }
+}
+
 impl<'a> Drop for Value<'a> {
     fn drop(&mut self) {
         self.unlock();
@@ -965,6 +1041,14 @@ impl<'a> ToRoot<'a> for Value<'a> {
                     None
                 } else {
                     Some(Root::Bytevec(*ptr))
+                }
+            }
+            #[cfg(feature = "types")]
+            ValueKind::Type(locked, ptr) => {
+                if *locked {
+                    None
+                } else {
+                    Some(Root::Type(*ptr))
                 }
             }
             ValueKind::Pair(locked, ptr) => {

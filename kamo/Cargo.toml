@@ -27,6 +27,7 @@ include = [
     "/src",
     "/tests/macros",
     "/tests/sexpr",
+    "/tests/types",
 ]
 
 [lints.clippy]
@@ -41,12 +42,14 @@ nursery = "warn"
 
 [dependencies]
 kamo-macros = { version = "0.1.0", path = "../kamo-macros", optional = true }
+lazy_static = { version = "1.4.0", optional = true }
 log = { version = "0.4.20", features = [
     "std",
     "release_max_level_info",
     "max_level_trace",
 ] }
 memchr = "2.6.4"
+paste = { version = "1.0.14", optional = true }
 regex = { version = "1.10.2", optional = true }
 smallvec = { version = "1.11.2", features = ["union"] }
 smartstring = "1.0.1"
@@ -56,5 +59,7 @@ unicode-ident = "1.0.12"
 kamo-macros = { version = "0.1.0", path = "../kamo-macros" }
 
 [features]
+default = ["types", "macros"]
 macros = ["dep:kamo-macros"]
 regex = ["dep:regex"]
+types = ["dep:lazy_static", "dep:paste"]

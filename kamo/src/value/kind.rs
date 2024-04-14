@@ -2,6 +2,8 @@
 
 use std::{hash, ptr::NonNull};
 
+#[cfg(feature = "types")]
+use crate::types::Type;
 use crate::{mem::Slot, value::SmartString};
 
 use super::{ByteVector, Pair, ValueTag, Vector};
@@ -92,6 +94,9 @@ pub enum ValueKind<'a> {
     Bytevec(bool, NonNull<Slot<ByteVector>>),
     /// A vector.
     Vector(bool, NonNull<Slot<Vector<'a>>>),
+    #[cfg(feature = "types")]
+    /// A type.
+    Type(bool, NonNull<Slot<Type>>),
 }
 
 impl<'a> ValueKind<'a> {
@@ -111,6 +116,8 @@ impl<'a> ValueKind<'a> {
             Self::Symbol(_, ptr) => Self::Symbol(false, *ptr),
             Self::Bytevec(_, ptr) => Self::Bytevec(false, *ptr),
             Self::Vector(_, ptr) => Self::Vector(false, *ptr),
+            #[cfg(feature = "types")]
+            Self::Type(_, ptr) => Self::Type(false, *ptr),
         }
     }
 }
@@ -155,6 +162,11 @@ impl<'a> hash::Hash for ValueKind<'a> {
             }
             Self::Vector(_, ptr) => {
                 ValueTag::Vector.hash(state);
+                ptr.hash(state);
+            }
+            #[cfg(feature = "types")]
+            Self::Type(_, ptr) => {
+                ValueTag::Type.hash(state);
                 ptr.hash(state);
             }
         }
@@ -214,6 +226,16 @@ impl<'a> PartialEq for ValueKind<'a> {
                 }
             }
             (Self::Vector(_, a), Self::Vector(_, b)) => {
+                if a == b {
+                    true
+                } else {
+                    let a = unsafe { a.as_ref() };
+                    let b = unsafe { b.as_ref() };
+                    a == b
+                }
+            }
+            #[cfg(feature = "types")]
+            (Self::Type(_, a), Self::Type(_, b)) => {
                 if a == b {
                     true
                 } else {
