@@ -1,6 +1,6 @@
 # Kamo-macros
 
-![Build Status](https://img.shields.io/github/actions/workflow/status/typedduck/kamo-macros/rust.yml)
+![Build Status](https://img.shields.io/github/actions/workflow/status/typedduck/kamo/rust.yml)
 [![Crates.io](https://img.shields.io/crates/v/kamo-macros)](https://crates.io/crates/kamo-macros)
 [![Crates.io](https://img.shields.io/crates/d/kamo-macros)](https://crates.io/crates/kamo-macros)
 
