@@ -26,23 +26,22 @@ impl<'a> Deref for EnvironmentRef<'a> {
 
 /* #region Environment */
 
-// pub type Positions = BTreeMap<ValueId, Position>;
+/// The scope is a mapping from names to indices, types and optional values. The
+/// indices are used to access the bindings in the activation stack at
+/// run-time. The optional values are used to store the values of bindings
+/// which are known at compile-time.
 pub type Scope<'a> = BTreeMap<String, (u32, Type, Option<Value<'a>>)>;
 
 /// The environment is a stack of scopes. Each scope is a mapping from names to
 /// indices, types and optional values. The indices are used to access the
-/// variables in the activation stack at run-time. The optional values are used
-/// to store the values of variables which are known at compile-time.
+/// bindings in the activation stack at run-time. The optional values are used
+/// to store the values of bindings which are known at compile-time.
 ///
-/// The environment also contains the global activation. The global activation
-/// is the first activation in the activation stack. It is used to store global
-/// variables. The global activation is always present. The environment also
-/// contains a reference to the mutator. The mutator is used to allocate new
-/// activations and values.
-///
-/// Additionally, the environment contains a mapping from values to properties.
-/// This is used to store the position of values which is used for error
-/// reporting.
+/// The environment also contains the global scope. The global scope is the
+/// first in the stack. It is used to store global bindings. The global scope
+/// is always present and cannot be popped. The environment also contains a
+/// reference to the mutator. The mutator is used to allocate new values and
+/// store them in the environment. The mutator is shared between all scopes.
 #[derive(Debug, PartialEq)]
 pub struct Environment<'a> {
     scopes: Vec<Scope<'a>>,
@@ -125,48 +124,41 @@ impl<'a> Environment<'a> {
         self.scopes.push(BTreeMap::new());
     }
 
-    /// Pop the top scope. Panics if it is the global scope. Returns `true` if
-    /// the scope was popped, `false` if the global scope would be popped.
+    /// Pop the top scope. Returns `Some(Scope)` if the scope was popped, `None`
+    /// if the global scope would be popped.
     ///
     /// # Panics
     ///
     /// Panics when compiled with debug assertions and the global scope would be
-    /// popped.
+    /// popped. This should never happen in a correct program.
     #[inline]
-    pub fn pop_scope(&mut self) -> bool {
+    pub fn pop_scope(&mut self) -> Option<Scope<'a>> {
         debug_assert!(self.scopes.len() > 1, "cannot pop global scope");
         if self.scopes.len() > 1 {
-            self.scopes.pop();
-            true
+            self.scopes.pop()
         } else {
-            false
+            None
         }
     }
 
-    /// Pop all scopes except the global scope. This ensures that the global
-    /// scope is the current top scope.
-    pub fn pop_all_scopes(&mut self) {
-        self.scopes.truncate(1);
-    }
-
-    /// Define a variable in the top scope.
+    /// Define a binding in the top scope.
     ///
-    /// If the top scope is the global scope, the variable is shadowed if it
+    /// If the top scope is the global scope, the binding is shadowed if it
     /// already exists. Previous definitions are not overwritten. The global
-    /// variable defined will be unbound.
+    /// binding defined will be unbound.
     ///
-    /// Otherwise in a local scope the variable is overwritten if it already
-    /// exists. The variable is defined in the top scope.
+    /// Otherwise in a local scope the binding is overwritten if it already
+    /// exists. The binding is defined in the top scope.
     ///
     /// If a binding value is given, it is the responsibility of the caller to
-    /// ensure that the type of the value matches the type of the variable.
+    /// ensure that the type of the value matches the type of the binding.
     ///
-    /// Returns the level and index of the variable by which it can be accessed
+    /// Returns the level and index of the binding by which it can be accessed
     /// in the activation stack.
     ///
     /// # Panics
     ///
-    /// Panics if the scope has more than `u32::MAX` variables.
+    /// Panics if the scope has more than `u32::MAX` bindings.
     pub fn define(
         &mut self,
         name: impl Into<String>,
@@ -196,20 +188,20 @@ impl<'a> Environment<'a> {
         }
     }
 
-    /// Lookup a variable in the environment.
+    /// Lookup a binding in the environment.
     ///
-    /// The variable is searched in the scopes from top to bottom. The first
-    /// [`Variable`] with the given name is returned. If no variable is found,
+    /// The binding is searched in the scopes from top to bottom. The first
+    /// [`Binding`] with the given name is returned. If no binding is found,
     /// `None` is returned.
     ///
     /// # Panics
     ///
-    /// Panics if the level of the variable is greater than `u32::MAX`.
-    pub fn lookup(&self, name: impl AsRef<str>) -> Option<Variable<'a>> {
+    /// Panics if the level of the binding is greater than `u32::MAX`.
+    pub fn lookup(&self, name: impl AsRef<str>) -> Option<Binding<'a>> {
         let name = name.as_ref();
         for (level, scope) in self.scopes.iter().enumerate().rev() {
             if let Some((index, var_type, var_binding)) = scope.get(name) {
-                return Some(Variable {
+                return Some(Binding {
                     level: u32::try_from(level).expect("level overflow"),
                     index: *index,
                     typedef: var_type.to_owned(),
@@ -264,58 +256,58 @@ impl<'a> Drop for ScopeGuard<'a> {
 
 /* #endregion */
 
-/* #region Variable */
+/* #region Binding */
 
-/// Contains the the compile-time information about a variable, which is
+/// Contains the the compile-time information about a binding, which is
 /// returned by the lookup in the environment. The optional value is the value
-/// of the variable, if it is known at compile-time.
+/// of the binding, if it is known at compile-time.
 ///
-/// It is garanteed that the variable is defined in the environment and that
-/// the type corresponds to the type of the variable if it is bound.
+/// It is garanteed that the binding is defined in the environment and that
+/// the type corresponds to the type of the binding if it is bound.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Variable<'a> {
-    /// The level of the variable in the activation stack. Level 0 is the top
+pub struct Binding<'a> {
+    /// The level of the binding in the activation stack. Level 0 is the top
     /// level, i.e. the current frame. Level 1 is the level of the parent frame,
     /// and so on.
     level: u32,
-    /// The index in the frame where the variable is stored at run-time.
+    /// The index in the frame where the binding is stored at run-time.
     index: u32,
-    /// The type of the variable.
+    /// The type of the binding.
     typedef: Type,
-    /// The value of the variable, if it is known at compile-time.
+    /// The value of the binding, if it is known at compile-time.
     value: Option<Value<'a>>,
 }
 
-impl<'a> Variable<'a> {
-    /// Get the level and index of the variable in the activation stack.
+impl<'a> Binding<'a> {
+    /// Get the level and index of the binding in the activation stack.
     #[must_use]
     #[inline]
     pub const fn access(&self) -> (u32, u32) {
         (self.level, self.index)
     }
 
-    /// Get the level of the variable in the activation stack.
+    /// Get the level of the binding in the activation stack.
     #[must_use]
     #[inline]
     pub const fn level(&self) -> u32 {
         self.level
     }
 
-    /// Get the index of the variable in the activation stack.
+    /// Get the index of the binding in the activation stack.
     #[must_use]
     #[inline]
     pub const fn index(&self) -> u32 {
         self.index
     }
 
-    /// Get the type of the variable.
+    /// Get the type of the binding.
     #[must_use]
     #[inline]
     pub const fn typedef(&self) -> &Type {
         &self.typedef
     }
 
-    /// Get the value of the variable, if it is known at compile-time.
+    /// Get the value of the binding, if it is known at compile-time.
     #[must_use]
     #[inline]
     pub const fn value(&self) -> Option<&Value<'a>> {
@@ -325,44 +317,44 @@ impl<'a> Variable<'a> {
 
 /* #endregion */
 
-/* #region Formals */
+/* #region Parameters */
 
-/// Defines the formals of a lambda expression.
+/// Defines the parameters of a lambda expression.
 ///
-/// * `positional` is a list of the positional arguments.
-/// * `variadic` is the name of the variadic argument, if any.
+/// * `positional` is a list of the positional parameters.
+/// * `variadic` is the name of the variadic parameter, if any.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Formals<'a> {
-    /// Positional arguments and their types.
+pub struct Parameters<'a> {
+    /// Positional parameters and their types.
     pub fixed: Vec<(Pointer<'a, Box<str>>, Type)>,
-    /// Variadic argument and its type if any.
+    /// Variadic parameter and its type if any.
     pub variadic: Option<(Pointer<'a, Box<str>>, Type)>,
 }
 
-impl<'a> Formals<'a> {
-    /// Return the number of formals including the variadic argument.
+impl<'a> Parameters<'a> {
+    /// Return the number of parameters including the variadic parameter.
     #[must_use]
     #[inline]
     pub fn len(&self) -> usize {
         self.fixed.len() + usize::from(self.variadic.is_some())
     }
 
-    /// Return `true` if there are no formals.
+    /// Return `true` if there are no parameters.
     #[must_use]
     #[inline]
     pub fn is_empty(&self) -> bool {
         self.fixed.is_empty() && self.variadic.is_none()
     }
 
-    /// Return `true` if there is a variadic argument.
+    /// Return `true` if there is a variadic parameter.
     #[must_use]
     #[inline]
     pub const fn is_variadic(&self) -> bool {
         self.variadic.is_some()
     }
 
-    /// Define the formals in a new scope. Returns a scope guard which pops the
-    /// scope when dropped.
+    /// Define the parameters in a new scope. Returns a scope guard which pops
+    /// the scope when dropped.
     #[must_use]
     pub fn define(&self, env: &EnvironmentRef<'a>) -> ScopeGuard<'a> {
         let guard = ScopeGuard::new(env.clone());

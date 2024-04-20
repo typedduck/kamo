@@ -16,9 +16,9 @@ pub enum TypeError {
     /// Option type must be a filled. It can than be either `nil` or the filled
     /// type.
     OptionNotFilled,
-    /// Argument type must either be a filled type or an option type. Takes the
-    /// argument index starting from 1.
-    ArgNotFilled(usize),
+    /// Parameter type must either be a filled type or an option type. Takes the
+    /// parameter index starting from 1.
+    ParamNotFilled(usize),
     /// Variadic type must either be a filled type or an option type.
     VariadicNotFilled,
     /// Pair car type must either be a filled type or an option type.
@@ -42,8 +42,8 @@ impl fmt::Display for TypeError {
             Self::ArrayElemNotFilled => write!(f, "array element type is not filled or an option"),
             Self::NestedOption => write!(f, "nested option types are not supported"),
             Self::OptionNotFilled => write!(f, "option type is not filled"),
-            Self::ArgNotFilled(idx) => {
-                write!(f, "argument {idx} type is not filled or an option")
+            Self::ParamNotFilled(idx) => {
+                write!(f, "parameter {idx} type is not filled or an option")
             }
             Self::VariadicNotFilled => write!(f, "variadic type is not filled or an option"),
             Self::PairCarNotFilled => write!(f, "pair car type is not filled or an option"),

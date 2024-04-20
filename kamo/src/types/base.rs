@@ -6,7 +6,7 @@ use std::{
 };
 
 use crate::{
-    env::Formals,
+    env::Parameters,
     mem::{Root, Trace},
     parser::{Input, ParseError},
 };
@@ -159,7 +159,7 @@ impl Type {
     ///
     /// # Errors
     ///
-    /// Returns an error if an argument type is not filled or an option, if the
+    /// Returns an error if an parameter type is not filled or an option, if the
     /// variadic type is not filled or an option or if the return type is not
     /// filled, an option or `void`.
     pub fn lambda<I>(args: I, varg: Option<Self>, ret: Self) -> Result<Self, TypeError>
@@ -170,7 +170,7 @@ impl Type {
         code.push(code::LAMBDA);
         for (i, arg) in args.into_iter().enumerate() {
             if !(arg.is_filled() || arg.is_option()) {
-                return Err(TypeError::ArgNotFilled(i + 1));
+                return Err(TypeError::ParamNotFilled(i + 1));
             }
             code.extend(arg.0);
         }
@@ -207,7 +207,11 @@ impl Type {
             let (varg, code) = binary::parse_varg(code, 0).expect("lambda varg-type");
             let (ret, _) = binary::parse_return(code, 0).expect("lambda return-type");
 
-            Some(LambdaType { args, varg, ret })
+            Some(LambdaType {
+                params: args,
+                variadic: varg,
+                result: ret,
+            })
         } else {
             None
         }
@@ -519,8 +523,8 @@ impl FromStr for Type {
     }
 }
 
-impl<'a> From<(&Formals<'a>, &Self)> for Type {
-    fn from((args, ret): (&Formals<'a>, &Self)) -> Self {
+impl<'a> From<(&Parameters<'a>, &Self)> for Type {
+    fn from((args, ret): (&Parameters<'a>, &Self)) -> Self {
         let fixed = args
             .fixed
             .iter()
@@ -798,9 +802,9 @@ mod tests {
         assert_eq!(
             Type::lambda(vec![], None, Type::any()).unwrap().as_lambda(),
             Some(LambdaType {
-                args: vec![],
-                varg: None,
-                ret: Type::any()
+                params: vec![],
+                variadic: None,
+                result: Type::any()
             })
         );
         assert_eq!(
@@ -808,9 +812,9 @@ mod tests {
                 .unwrap()
                 .as_lambda(),
             Some(LambdaType {
-                args: vec![Type::any()],
-                varg: None,
-                ret: Type::any()
+                params: vec![Type::any()],
+                variadic: None,
+                result: Type::any()
             })
         );
         assert_eq!(
@@ -818,9 +822,9 @@ mod tests {
                 .unwrap()
                 .as_lambda(),
             Some(LambdaType {
-                args: vec![Type::any()],
-                varg: Some(Type::any()),
-                ret: Type::any()
+                params: vec![Type::any()],
+                variadic: Some(Type::any()),
+                result: Type::any()
             })
         );
         assert_eq!(
@@ -828,9 +832,9 @@ mod tests {
                 .unwrap()
                 .as_lambda(),
             Some(LambdaType {
-                args: vec![Type::any(), Type::any()],
-                varg: None,
-                ret: Type::any()
+                params: vec![Type::any(), Type::any()],
+                variadic: None,
+                result: Type::any()
             })
         );
         assert_eq!(
@@ -842,9 +846,9 @@ mod tests {
             .unwrap()
             .as_lambda(),
             Some(LambdaType {
-                args: vec![Type::any(), Type::any()],
-                varg: Some(Type::any()),
-                ret: Type::any()
+                params: vec![Type::any(), Type::any()],
+                variadic: Some(Type::any()),
+                result: Type::any()
             })
         );
     }

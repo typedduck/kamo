@@ -1,5 +1,5 @@
 use crate::{
-    env::{EnvironmentRef, Formals, ScopeGuard},
+    env::{EnvironmentRef, Parameters, ScopeGuard},
     mem::Pointer,
     parser::{Code, Input},
     types::{parser::text, Type},
@@ -232,9 +232,10 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// Checks the type of the given lambda declaration. The parameters and body
     /// are checked in a new scope. Returns the type of the lambda.
     ///
-    /// Calls [`TypeChecker::formals_declaration()`] to check the parameters of
-    /// the lambda. Calls [`TypeChecker::expression()`] to check the body of the
-    /// lambda. Calls [`TypeChecker::expect_return`] to check the return type.
+    /// Calls [`TypeChecker::parameter_list_declaration()`] to check the
+    /// parameters of the lambda. Calls [`TypeChecker::expression()`] to check
+    /// the body of the lambda. Calls [`TypeChecker::expect_return`] to check
+    /// the return type.
     ///
     /// Variables declared in the lambda will not persist after the lambda has
     /// been checked.
@@ -246,11 +247,11 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// error is returned.
     fn lambda_declaration(
         &mut self,
-        params: Formals<'a>,
+        params: Parameters<'a>,
         rettype: Type,
         body: Value<'a>,
     ) -> Result<Type> {
-        // Set up the scope for the function body with the formals
+        // Set up the scope for the function body with the parameters
         let _guard = params.define(&self.env());
         let body = self.expression(body.clone())?;
 
@@ -259,23 +260,23 @@ pub trait TypeChecker<'a, const ECO: Code> {
     }
 
     /// Checks the type of the given parameter declarations. Returns the
-    /// parameters of the function as a [`Formals`] struct.
+    /// parameters of the function as a [`Parameters`] struct.
     ///
     /// The paramaters are not inserted into the current scope. They are only
     /// checked for correctness. To add the parameters to a new scope, use
-    /// [`Formals::define()`].
+    /// [`Parameters::define()`].
     ///
     /// Expects the parameters to be a list of parameter declarations. The list
     /// may be empty. Each parameter declaration is processed by
-    /// [`TypeChecker::param_declaration()`].
+    /// [`TypeChecker::parameter_declaration()`].
     ///
     /// # Errors
     ///
     /// If the parameter declarations are not valid, then an error is returned.
-    fn formals_declaration(&self, params: Value<'a>) -> Result<Formals<'a>> {
+    fn parameter_list_declaration(&self, params: Value<'a>) -> Result<Parameters<'a>> {
         let mut cursor = match params.kind() {
             ValueKind::Pair(_, pair) => Pointer::from(*pair),
-            ValueKind::Nil => return Ok(Formals::default()),
+            ValueKind::Nil => return Ok(Parameters::default()),
             _ => return Err(TypeCheckError::MalformedParamDecls),
         };
         let mut params = vec![];
@@ -283,14 +284,14 @@ pub trait TypeChecker<'a, const ECO: Code> {
 
         loop {
             let param = cursor.car().to_owned();
-            let (name, ty) = self.param_declaration(param)?;
+            let (name, ty) = self.parameter_declaration(param)?;
 
             params.push((name, ty));
             match cursor.next() {
                 Next::Pair(param) => cursor = param,
                 Next::Nil => break,
                 Next::Dot(param) => {
-                    let (name, ty) = self.param_declaration(param)?;
+                    let (name, ty) = self.parameter_declaration(param)?;
 
                     varg = Some((name, ty));
                     break;
@@ -298,7 +299,7 @@ pub trait TypeChecker<'a, const ECO: Code> {
             };
         }
 
-        Ok(Formals {
+        Ok(Parameters {
             fixed: params,
             variadic: varg,
         })
@@ -316,7 +317,7 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// If the parameter is not a valid parameter declaration, then an error is
     /// returned.
-    fn param_declaration(&self, param: Value<'a>) -> Result<(Pointer<'a, Box<str>>, Type)> {
+    fn parameter_declaration(&self, param: Value<'a>) -> Result<(Pointer<'a, Box<str>>, Type)> {
         let param = param
             .as_pair_ptr()
             .ok_or_else(|| TypeCheckError::MalformedParameter)?;
@@ -568,12 +569,12 @@ mod tests {
                 .map(|operand| self.expression(operand.to_owned()))
                 .collect::<Result<Vec<_>>>()?;
 
-            self.expect_arity(tag, fntype.args.len(), operands.len())?;
+            self.expect_arity(tag, fntype.params.len(), operands.len())?;
 
-            for (i, (expected, actual)) in fntype.args.iter().zip(args.iter()).enumerate() {
+            for (i, (expected, actual)) in fntype.params.iter().zip(args.iter()).enumerate() {
                 self.expect_type(actual, expected, &operands[i])?;
             }
-            Ok(fntype.ret)
+            Ok(fntype.result)
         }
     }
 
@@ -625,7 +626,7 @@ mod tests {
                         let (name, declared) = match operands[0].kind() {
                             ValueKind::Symbol(_, symbol) => (Pointer::from(*symbol), None),
                             ValueKind::Pair(_, _) => self
-                                .param_declaration(operands[0].clone())
+                                .parameter_declaration(operands[0].clone())
                                 .map(|(name, ty)| (name, Some(ty)))?,
                             _ => return Err(TypeCheckError::NotASymbol),
                         };
@@ -687,7 +688,7 @@ mod tests {
                             .as_symbol_ptr()
                             .ok_or(TypeCheckError::NotASymbol)?
                             .clone();
-                        let params = self.formals_declaration(operands[1].clone())?;
+                        let params = self.parameter_list_declaration(operands[1].clone())?;
                         let rettag = operands[2]
                             .as_symbol_ptr()
                             .ok_or(TypeCheckError::NotASymbol)?;
@@ -708,7 +709,7 @@ mod tests {
                     "lambda" => {
                         self.expect_arity(tag.as_ref(), 4, operands.len())?;
 
-                        let params = self.formals_declaration(operands[0].clone())?;
+                        let params = self.parameter_list_declaration(operands[0].clone())?;
                         let rettag = operands[1]
                             .as_symbol_ptr()
                             .ok_or(TypeCheckError::NotASymbol)?;

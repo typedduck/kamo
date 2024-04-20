@@ -29,43 +29,43 @@ impl PartialEq<Type> for ArrayType {
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 pub struct LambdaType {
-    pub args: Vec<Type>,
-    pub varg: Option<Type>,
-    pub ret: Type,
+    pub params: Vec<Type>,
+    pub variadic: Option<Type>,
+    pub result: Type,
 }
 
 impl fmt::Display for LambdaType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "fn(")?;
-        match (self.args.len(), &self.varg) {
+        match (self.params.len(), &self.variadic) {
             (0, None) => write!(f, "void")?,
             (0, Some(varg)) => write!(f, "...{varg}")?,
-            (1, None) => write!(f, "{}", self.args[0])?,
-            (1, Some(varg)) => write!(f, "{}, ...{}", self.args[0], varg)?,
+            (1, None) => write!(f, "{}", self.params[0])?,
+            (1, Some(varg)) => write!(f, "{}, ...{}", self.params[0], varg)?,
             (n, None) => {
-                for arg in &self.args[..n - 1] {
+                for arg in &self.params[..n - 1] {
                     write!(f, "{arg}, ")?;
                 }
-                write!(f, "{}", self.args[n - 1])?;
+                write!(f, "{}", self.params[n - 1])?;
             }
             (n, Some(varg)) => {
-                for arg in &self.args[..n - 1] {
+                for arg in &self.params[..n - 1] {
                     write!(f, "{arg}, ")?;
                 }
-                write!(f, "{}, ...{}", self.args[n - 1], varg)?;
+                write!(f, "{}, ...{}", self.params[n - 1], varg)?;
             }
         }
-        write!(f, " -> {})", self.ret)
+        write!(f, " -> {})", self.result)
     }
 }
 
 impl PartialEq<Type> for LambdaType {
     fn eq(&self, other: &Type) -> bool {
         if let Some(other) = other.as_lambda() {
-            self.args.len() == other.args.len()
-                && self.args == other.args
-                && self.varg == other.varg
-                && self.ret == other.ret
+            self.params.len() == other.params.len()
+                && self.params == other.params
+                && self.variadic == other.variadic
+                && self.result == other.result
         } else {
             false
         }

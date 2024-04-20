@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Argument {
+pub enum Parameter {
     Fixed(Type),
     Variadic(Type),
 }
@@ -260,7 +260,7 @@ pub fn parse_lambda<'a, 'b, const ECO: Code>(
         let (signature, cursor) = delimited(
             pair(tag("fn("), ascii::whitespace0),
             opt(pair(
-                parse_arglist::<ECO>(env.clone()),
+                parse_param_list::<ECO>(env.clone()),
                 preceded(
                     delimited(ascii::whitespace0, tag("->"), ascii::whitespace0),
                     parse_rettype::<ECO>(env.clone()),
@@ -302,23 +302,23 @@ pub fn parse_rettype<'a, 'b, const ECO: Code>(
     }
 }
 
-/// Parse an argument list from a string. Takes an error code offset as a
+/// Parse a parameter list from a string. Takes an error code offset as a
 /// parameter. All custom errors are reported with the given code offset and
 /// correspond to the `ERR_CONTEXT + offset` error domain.
 ///
 /// # Grammar
 ///
 /// ```text
-/// arglist = (filled ("," filled)* ("," "..." filled)?)
-///         | ("..." filled)
-///         | "void"
+/// param_list = (filled ("," filled)* ("," "..." filled)?)
+///            | ("..." filled)
+///            | "void"
 /// ```
-pub fn parse_arglist<'a, 'b, const ECO: Code>(
+pub fn parse_param_list<'a, 'b, const ECO: Code>(
     env: Option<EnvironmentRef<'a>>,
 ) -> impl Fn(Input<'b>) -> ParseResult<'b, (Vec<Type>, Option<Type>)> + 'a {
     use crate::parser::prelude::*;
 
-    fn arglist<'a, 'b, const ECO: Code>(
+    fn param_list<'a, 'b, const ECO: Code>(
         env: Option<EnvironmentRef<'a>>,
     ) -> impl Fn(Input<'b>) -> ParseResult<'b, (Vec<Type>, Option<Type>)> + 'a {
         move |input| {
@@ -329,13 +329,13 @@ pub fn parse_arglist<'a, 'b, const ECO: Code>(
                 || (Vec::new(), None),
                 |(mut args, mut varg), _, arg| {
                     match arg {
-                        Argument::Fixed(arg) => args.push(arg),
-                        Argument::Variadic(arg) => match varg_err {
+                        Parameter::Fixed(arg) => args.push(arg),
+                        Parameter::Variadic(arg) => match varg_err {
                             Ok(true) => {
                                 varg_err = Err(ParseError::new(
                                     input.position(),
                                     0,
-                                    "Multiple variadic arguments",
+                                    "Multiple variadic parameters in lambda type",
                                 ));
                             }
                             Ok(false) => {
@@ -357,14 +357,14 @@ pub fn parse_arglist<'a, 'b, const ECO: Code>(
     move |input| {
         any((
             map(tag("void"), |_| (vec![], None)),
-            arglist::<ECO>(env.clone()),
+            param_list::<ECO>(env.clone()),
         ))(input)
     }
 }
 
 fn parse_arg<'a, 'b, const ECO: Code>(
     env: Option<EnvironmentRef<'a>>,
-) -> impl Fn(Input<'b>) -> ParseResult<'b, Argument> + 'a {
+) -> impl Fn(Input<'b>) -> ParseResult<'b, Parameter> + 'a {
     use crate::parser::prelude::*;
 
     move |input| {
@@ -374,9 +374,9 @@ fn parse_arg<'a, 'b, const ECO: Code>(
                     pair(tag("..."), ascii::whitespace0),
                     parse_filled::<ECO>(env.clone()),
                 ),
-                Argument::Variadic,
+                Parameter::Variadic,
             ),
-            map(parse_filled::<ECO>(env.clone()), Argument::Fixed),
+            map(parse_filled::<ECO>(env.clone()), Parameter::Fixed),
         ))(input)
     }
 }
@@ -403,8 +403,8 @@ pub fn parse_named<'a, 'b, const ECO: Code>(
         )(input)?;
 
         if let Some(env) = env.clone() {
-            if let Some(variable) = env.borrow().lookup(name) {
-                let ty = variable.value().ok_or_else(|| {
+            if let Some(binding) = env.borrow().lookup(name) {
+                let ty = binding.value().ok_or_else(|| {
                     ParseError::new(
                         cursor.position(),
                         ERR_UNBOUND_NAME + ECO,
@@ -417,7 +417,7 @@ pub fn parse_named<'a, 'b, const ECO: Code>(
                         ERR_EXPECTED_TYPE + ECO,
                         TypeParseError::ExpectedType(
                             name.to_string(),
-                            variable.typedef().to_owned(),
+                            binding.typedef().to_owned(),
                         ),
                     )
                 })?;
