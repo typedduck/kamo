@@ -16,7 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Build
+    - name: Build binary
       run: cargo build --release --verbose --all-features
     - name: Run tests
       run: cargo test --verbose --all-features
+    - name: Build documentation
+      run: cargo doc --all-features
+
