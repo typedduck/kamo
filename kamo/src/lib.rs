@@ -1,6 +1,11 @@
 //! A library to assist in the creation of an interpreter or compiler and its
 //! associated runtime.
 //!
+//! This is the third release of the Kamo project. This crate adds type-system
+//! and type-checking support to the project. The type system is used to infer
+//! the types of the intermediate representation and the AST. The type-checker
+//! is used to check the types of the intermediate representation and the AST.
+//!
 //! This is the second release of the Kamo project. This crate contains the
 //! parser library and the memory management library, which also includes the
 //! runtime representation of values.
@@ -133,7 +138,7 @@
 //! program. The intermediate representation can then be either interpreted or
 //! compiled into a target representation.
 //!
-//! # Parser Example
+//! ### Parser Example
 //!
 //! Example of a parser that parses a Scheme-like byte-vector and returns it as
 //! `Vec<u8>`.
@@ -230,7 +235,7 @@
 //! }
 //! ```
 //!
-//! # Macros
+//! ## Macros
 //!
 //! Macros are available when the `macros` feature is enabled. It is not
 //! enabled by default.
@@ -284,7 +289,7 @@
 //! will be based on the `kamo::parser` crate and will be used by the scheme
 //! interpreter.
 //!  
-//! ## Examples
+//! ### Examples
 //!  
 //! ```rust
 //! use kamo::{mem::Mutator, value::{print, Value}};
@@ -327,7 +332,7 @@
 //! assert_eq!(values.len(), 0);
 //! ```
 //!
-//! # Feature List
+//! ## Feature List
 //!
 //! - [x] Module `kamo::parser` for parsing UTF-8 text. A parser combinator
 //! library for parsing UTF-8 text in a safe and mostly zero-copy way.
@@ -336,13 +341,13 @@
 //! is done by a mark and sweep garbage collector.
 //! - [x] Module `kamo::value` for values. Values can either hold immediate values
 //! or pointers to values allocated in the mutator.
+//! - [x] Module `kamo::types` for types. The type system is used to infer the
+//! types of the intermediate representation and the AST.
 //! - [ ] Module `kamo::eval` for evaluation. The evaluator processes an AST, which
 //! is an symbolic expression tree, and evaluates it to an intermediate
 //! representation. The intermediate representation can then be interpreted or
 //! compiled to a target representation. The interpreter is generic and can be
 //! used to interpret any intermediate representation.
-//! - [ ] Module `kamo::types` for types. The type system is used to infer the
-//! types of the intermediate representation and the AST.
 //! - [ ] Module `kamo::repl` for a read-eval-print-loop. The REPL is used to
 //! interactively evaluate expressions and is generic and can be used to
 //! evaluate any intermediate representation.
