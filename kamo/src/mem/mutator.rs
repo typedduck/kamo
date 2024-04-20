@@ -69,12 +69,10 @@ pub const MAX_ALLOCATION_PRESSURE: usize = 1024 * 1024;
 /// * [`Box<str>`](Box<str>) (symbol)
 /// * [`Vector`](Vector) (vector)
 ///
-/// The mutator can also allocate values which are used by the evaluator:
-/// * [`Activation`](Activation) (activation frame)
-/// * [`Procedure`](Procedure) (procedure)
+/// The mutator can also allocate types if the `types` feature is enabled. The
+/// types which can be allocated by the mutator are:
 ///
-/// In order to allocate the values for the evaluator, the `evaluate` feature
-/// must be enabled.
+/// * [`Type`](Type) (type)
 ///
 /// All allocations are returned as [`Pointer`](Pointer)s. A pointer is a
 /// reference to a value in the mutator. The pointer is reference counted and
