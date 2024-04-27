@@ -33,7 +33,7 @@
 use std::{cell::RefCell, collections::BTreeMap, ops::Deref, rc::Rc};
 
 use crate::{
-    mem::{Mutator, MutatorRef, Pointer},
+    mem::{Mutator, MutatorRef},
     types::Type,
     value::Value,
 };
