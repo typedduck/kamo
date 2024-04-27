@@ -343,6 +343,7 @@ impl<'a> From<NonNull<Slot<Vector<'a>>>> for Pointer<'a, Vector<'a>> {
 }
 
 #[cfg(feature = "types")]
+#[cfg_attr(docsrs, doc(cfg(feature = "types")))]
 impl<'a> From<NonNull<Slot<Type>>> for Pointer<'a, Type> {
     /// Creates a new pointer to the given [`NonNull<Slot<Type>>`](Slot)
     /// pointer and locks the entry.

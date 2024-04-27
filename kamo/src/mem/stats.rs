@@ -14,6 +14,7 @@ pub struct Stats {
     /// The total number of allocated vectors.
     pub allocated_vectors: usize,
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// The total number of allocated types.
     pub allocated_types: usize,
     /// The number of allocations since the last garbage collection.

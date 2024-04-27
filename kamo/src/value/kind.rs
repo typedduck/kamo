@@ -95,6 +95,7 @@ pub enum ValueKind<'a> {
     /// A vector.
     Vector(bool, NonNull<Slot<Vector<'a>>>),
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// A type.
     Type(bool, NonNull<Slot<Type>>),
 }

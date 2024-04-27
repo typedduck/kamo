@@ -314,6 +314,7 @@ impl<'a> Mutator<'a> {
     }
 
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     pub fn new_type(&mut self, value: Type) -> Pointer<'a, Type> {
         self.on_allocate();
 
@@ -380,6 +381,7 @@ impl<'a> Mutator<'a> {
     }
 
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// Coerces the raw pointer into a valid type pointer. Returns `None` if
     /// the pointer is not valid.
     #[inline]

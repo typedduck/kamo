@@ -80,6 +80,7 @@ impl<'a> Value<'a> {
     }
 
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// Creates a new type.
     #[allow(clippy::needless_pass_by_value)]
     #[must_use]
@@ -549,6 +550,7 @@ impl<'a> Value<'a> {
     }
 
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// If the value is a type, returns it as a [`Type`]. Otherwise, returns
     /// `None`.
     #[must_use]
@@ -561,6 +563,7 @@ impl<'a> Value<'a> {
     }
 
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// If the value is a type, returns it as a `Pointer<'a, Type>`. Otherwise,
     /// returns `None`.
     #[must_use]
@@ -675,6 +678,7 @@ impl<'a> Value<'a> {
     }
 
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// Returns `true` if the value is a type.
     #[must_use]
     #[inline]
@@ -989,6 +993,7 @@ impl<'a> From<Pointer<'a, Box<str>>> for Value<'a> {
 }
 
 #[cfg(feature = "types")]
+#[cfg_attr(docsrs, doc(cfg(feature = "types")))]
 impl<'a> From<Pointer<'a, Type>> for Value<'a> {
     fn from(ptr: Pointer<'a, Type>) -> Self {
         let ptr = NonNull::new(unsafe { ptr.into_raw() }).expect("null-pointer");

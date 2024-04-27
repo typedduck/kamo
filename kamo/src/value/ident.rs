@@ -133,6 +133,7 @@ impl From<&Pointer<'_, Pair<'_>>> for ValueId {
 }
 
 #[cfg(feature = "types")]
+#[cfg_attr(docsrs, doc(cfg(feature = "types")))]
 impl From<&Pointer<'_, Type>> for ValueId {
     #[inline]
     fn from(ptr: &Pointer<'_, Type>) -> Self {
@@ -155,6 +156,7 @@ pub enum ValueTag {
     Vector,
     Pair,
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     Type,
 }
 

@@ -65,6 +65,7 @@ pub trait Visitor {
     /// early.
     fn visit_vector(&mut self, value: &Vector<'_>) -> Self::Result;
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// Visit if the value is `Value::Type`. Is only available if the `types`
     /// feature is enabled.
     fn visit_type(&mut self, value: &Type) -> Self::Result;

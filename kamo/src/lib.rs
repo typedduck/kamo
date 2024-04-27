@@ -390,11 +390,13 @@
 extern crate lazy_static;
 
 #[cfg(feature = "types")]
+#[cfg_attr(docsrs, doc(cfg(feature = "types")))]
 pub mod env;
 pub mod form;
 pub mod mem;
 pub mod parser;
 #[cfg(feature = "types")]
+#[cfg_attr(docsrs, doc(cfg(feature = "types")))]
 pub mod types;
 pub mod value;
 
@@ -402,6 +404,7 @@ mod position;
 pub use position::Position;
 
 #[cfg(feature = "macros")]
+#[cfg_attr(docsrs, doc(cfg(feature = "macros")))]
 pub use kamo_macros::{sexpr, sexpr_file, sexpr_script};
 
 #[cfg(all(test, feature = "macros"))]

@@ -102,6 +102,7 @@ pub enum Root<'a> {
     /// A pointer to a slot that contains a [`Vector`].
     Vector(NonNull<Slot<Vector<'a>>>),
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     /// A pointer to a slot that contains a [`Type`].
     Type(NonNull<Slot<Type>>),
 }

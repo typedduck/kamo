@@ -254,6 +254,7 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
     }
 
     #[cfg(feature = "types")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "types")))]
     fn visit_type(&mut self, value: &Type) -> Self::Result {
         write!(self.0, "#<type {value}>")
     }
