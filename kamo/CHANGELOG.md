@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.9.0](https://github.com/typedduck/kamo/tree/kamo-v0.9.0) - 2024-04-27
+
+* Add module `types` and `env`. The module `types` contains the type system and
+  type checker for a language. The module `env` contains the environment for an
+  interpreter.
+
 ## [0.8.1](https://github.com/typedduck/kamo/tree/kamo-v0.8.1) - 2024-04-13
 
 * Merge kamo-macros into the main crate. There will be no separate repository for
