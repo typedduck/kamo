@@ -1,5 +1,10 @@
 # Change Log
 
+## [0.9.2](https://github.com/typedduck/kamo/tree/kamo-v0.9.2) - 2024-04-28
+
+* Add package metadata for `docs.rs` in `Cargo.toml` in crate `kamo`.
+* Add `cfg_attr` to `lib.rs` in crate `kamo`.
+
 ## [0.9.1](https://github.com/typedduck/kamo/tree/kamo-v0.9.1) - 2024-04-27
 
 * Change categories and keywords in `Cargo.toml` in crate `kamo`.

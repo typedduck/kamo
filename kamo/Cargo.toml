@@ -3,7 +3,7 @@
 
 [package]
 name = "kamo"
-version = "0.9.1"
+version = "0.9.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["TypedDuck <typedduck@posteo.net>"]
@@ -34,6 +34,10 @@ include = [
     "/tests/types",
 ]
 
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
 [lints.clippy]
 pedantic = "warn"
 cargo = "warn"
@@ -63,6 +67,7 @@ unicode-ident = "1.0.12"
 kamo-macros = { version = "0.1.0", path = "../kamo-macros" }
 
 [features]
+default = []
 macros = ["dep:kamo-macros"]
 regex = ["dep:regex"]
 types = ["dep:lazy_static", "dep:paste"]
