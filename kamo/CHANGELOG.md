@@ -1,5 +1,9 @@
 # Change Log
 
+## [0.9.1](https://github.com/typedduck/kamo/tree/kamo-v0.9.1) - 2024-04-27
+
+* Change categories and keywords in `Cargo.toml` in crate `kamo`.
+
 ## [0.9.0](https://github.com/typedduck/kamo/tree/kamo-v0.9.0) - 2024-04-27
 
 * Add module `types` and `env`. The module `types` contains the type system and

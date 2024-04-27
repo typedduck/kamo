@@ -3,18 +3,22 @@
 
 [package]
 name = "kamo"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 authors = ["TypedDuck <typedduck@posteo.net>"]
 homepage = "https://github.com/typedduck/kamo"
 repository = "https://github.com/typedduck/kamo"
 description = "A library to assist in the creation of an interpreter or compiler and its associated runtime."
-categories = ["parsing", "data-structures", "memory-management"]
+categories = [
+    "parsing",
+    "parser-implementations",
+    "data-structures",
+    "memory-management",
+]
 keywords = [
     "paser-combinators",
-    "parser",
-    "parsing",
+    "type-checker",
     "memory-management",
     "garbage-collection",
 ]
