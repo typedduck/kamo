@@ -1,9 +1,12 @@
+//! # Error Types for the Type Parsers
+
 use std::{error::Error, fmt};
 
 use crate::types::{Type, ARRAY_MAX};
 
 /* #region TypeCodeError */
 
+/// An error that occurs during type code parsing.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum TypeCodeError {
@@ -132,6 +135,7 @@ impl fmt::Debug for TypeCodeError {
 /* #region TypeParseError */
 
 pub mod code {
+    //! # Error Codes for the Type Parser
     use crate::parser::{code::ERR_CONTEXT, Code};
 
     pub const ERR_TYPE: Code = ERR_CONTEXT + 0x0001;
@@ -144,17 +148,27 @@ pub mod code {
     pub const ERR_ARRAY_LENGTH: Code = ERR_CONTEXT + 0x0008;
 }
 
+/// An error that occurs during type parsing.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, PartialEq, Eq)]
 pub enum TypeParseError {
+    /// Not a type.
     NotAType,
+    /// Expecting a filled or named type.
     NotAFilledType,
+    /// Malformed type name.
     MalformedName,
+    /// Undefined type name.
     UndefinedName(String),
+    /// Unbound type name.
     UnboundName(String),
+    /// Expected a type.
     ExpectedType(String, Type),
+    /// Nested option types are not supported.
     NestedOption,
+    /// Array length exceeds maximum.
     ArrayLength,
+    /// Array length exceeds maximum.
     ArrayLengthCast,
 }
 

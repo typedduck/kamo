@@ -5,29 +5,51 @@ use crate::{
     types::{Type, TypeError},
 };
 
+/// An error that occurs during type checking.
 #[allow(clippy::module_name_repetitions)]
 #[derive(PartialEq)]
 pub enum TypeCheckError {
+    /// The expected and found arity of a function do not match.
     ArityMismatch(String, usize, usize),
+    /// The expected minimum arity of a function is not met.
     MinArityMismatch(String, usize, usize),
+    /// The expected maximum arity of a function is exceeded.
     MaxArityMismatch(String, usize, usize),
+    /// The value is not a symbol.
     NotASymbol,
+    /// The value is not a list.
     NotAList,
+    /// The value is not a type.
     NotAType,
+    /// The value is not a function.
     NotAFunction(Type),
+    /// The list is inproper.
     InproperList,
+    /// The type is unknown.
     UnknownType(String),
+    /// The operator is unknown.
     UnknownOperator(String),
+    /// The operator type is unexpected.
     UnexpectedOperatorType(String, Type, Vec<Type>),
+    /// The expected and found type of a value do not match.
     ExpectedType(Type, Type, String),
+    /// The expected and found return type of a function do not match.
     ExpectedReturnType(Type, Type, String),
+    /// The variable is undefined.
     UndefinedVariable(String),
+    /// The variable is unbound.
     UnboundVariable(String),
+    /// The declaration is malformed.
     MalformedDeclaration,
+    /// The parameter is malformed.
     MalformedParameter,
-    MalformedParamDecls,
-    MalformedReturnDecl,
+    /// The parameter declarations are malformed.
+    MalformedParameterList,
+    /// The return declaration is malformed.
+    MalformedReturn,
+    /// A type error occurred.
     TypeError(TypeError),
+    /// A parse error occurred.
     ParseError(ParseError),
 }
 
@@ -97,11 +119,11 @@ impl fmt::Display for TypeCheckError {
                 f,
                 "malformed parameter: expected `(<symbol> . <type>)` or `(<symbol> <type>)`"
             ),
-            Self::MalformedParamDecls => write!(
+            Self::MalformedParameterList => write!(
                 f,
                 "malformed parameter declarations: expected `((<symbol> . <type>) ...)`, `((<symbol> <type>) ...)` or `()`"
             ),
-            Self::MalformedReturnDecl => write!(
+            Self::MalformedReturn => write!(
                 f,
                 "malformed return declaration: expected `-> <type>``"
             ),

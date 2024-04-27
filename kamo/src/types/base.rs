@@ -6,16 +6,17 @@ use std::{
 };
 
 use crate::{
-    env::Parameters,
     mem::{Root, Trace},
     parser::{Input, ParseError},
 };
 
 use super::{
     parser::{binary, code, text, TypeCodeError},
-    ArrayType, LambdaType, OptionType, PairType, TypeError, TypeVec, UnionType,
+    ArrayType, LambdaType, OptionType, PairType, Parameters, TypeError, TypeVec, UnionType,
 };
 
+/// A type definition.
+///
 /// # Grammar:
 ///
 /// The binary representation of a type is a sequence of type codes. The type
@@ -162,24 +163,24 @@ impl Type {
     /// Returns an error if an parameter type is not filled or an option, if the
     /// variadic type is not filled or an option or if the return type is not
     /// filled, an option or `void`.
-    pub fn lambda<I>(args: I, varg: Option<Self>, ret: Self) -> Result<Self, TypeError>
+    pub fn lambda<I>(params: I, variadic: Option<Self>, ret: Self) -> Result<Self, TypeError>
     where
         I: IntoIterator<Item = Self>,
     {
         let mut code = TypeVec::default();
         code.push(code::LAMBDA);
-        for (i, arg) in args.into_iter().enumerate() {
+        for (i, arg) in params.into_iter().enumerate() {
             if !(arg.is_filled() || arg.is_option()) {
                 return Err(TypeError::ParamNotFilled(i + 1));
             }
             code.extend(arg.0);
         }
-        if let Some(varg) = varg {
-            if !(varg.is_filled() || varg.is_option()) {
+        if let Some(variadic) = variadic {
+            if !(variadic.is_filled() || variadic.is_option()) {
                 return Err(TypeError::VariadicNotFilled);
             }
             code.push(code::VARIADIC);
-            code.extend(varg.0);
+            code.extend(variadic.0);
         }
         code.push(code::RETURN);
         code.extend(ret.0);
@@ -203,13 +204,13 @@ impl Type {
     pub fn as_lambda(&self) -> Option<LambdaType> {
         if self.is_lambda() {
             let code = &self.0.as_slice()[1..];
-            let (args, code) = binary::parse_args(code, 0).expect("lambda arg-types");
-            let (varg, code) = binary::parse_varg(code, 0).expect("lambda varg-type");
-            let (ret, _) = binary::parse_return(code, 0).expect("lambda return-type");
+            let (params, code) = binary::parse_params(code, 0).expect("lambda parameter types");
+            let (variadic, code) = binary::parse_variadic(code, 0).expect("lambda variadic type");
+            let (ret, _) = binary::parse_return(code, 0).expect("lambda return type");
 
             Some(LambdaType {
-                params: args,
-                variadic: varg,
+                params,
+                variadic,
                 result: ret,
             })
         } else {
@@ -303,7 +304,10 @@ impl Type {
             let (car, code) = binary::parse_filled_or_option(code, 0).expect("pair car-type");
             let (cdr, _) = binary::parse_filled_or_option(code, 0).expect("pair cdr-type");
 
-            Some(PairType { car, cdr })
+            Some(PairType {
+                head: car,
+                tail: cdr,
+            })
         } else {
             None
         }
@@ -524,13 +528,13 @@ impl FromStr for Type {
 }
 
 impl<'a> From<(&Parameters<'a>, &Self)> for Type {
-    fn from((args, ret): (&Parameters<'a>, &Self)) -> Self {
-        let fixed = args
+    fn from((params, ret): (&Parameters<'a>, &Self)) -> Self {
+        let fixed = params
             .fixed
             .iter()
             .map(|arg| arg.1.clone())
             .collect::<Vec<_>>();
-        let variadic = args.variadic.as_ref().map(|arg| arg.1.clone());
+        let variadic = params.variadic.as_ref().map(|arg| arg.1.clone());
         Self::lambda(fixed, variadic, ret.to_owned()).expect("lambda type")
     }
 }
@@ -772,8 +776,8 @@ mod tests {
         assert_eq!(
             Type::pair(Type::any(), Type::any()).unwrap().as_pair(),
             Some(PairType {
-                car: Type::any(),
-                cdr: Type::any()
+                head: Type::any(),
+                tail: Type::any()
             })
         );
         assert_eq!(

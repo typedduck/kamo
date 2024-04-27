@@ -1,3 +1,27 @@
+//! # Type parser for textual type representation
+//!
+//! The type parser is used to parse textual type representations. It is used to
+//! parse types from strings. The parser is implemented with the combinator
+//! parsing library defined in the module [`parser`](crate::parser).
+//!
+//! The grammar for the type parser is defined as follows:
+//!
+//! ```text
+//! type       = ("nil" | "void" | filled) eof
+//! filled     = (predefined | array | pair | lambda | named) "?"?
+//! predefined = "any" | "type" | "bool" | "char"
+//!            | "symbol" | "binary" | "int" | "float"
+//! array      = "[" filled array-len? "]"
+//! array-len  = ";" number
+//! pair       = "(" filled "*" filled ")"
+//! lambda     = "fn(" (param_list "->" rettype)? ")"
+//! param_list = (filled ("," filled)* ("," "..." filled)?)
+//!            | ("..." filled)
+//!            | "void"
+//! rettype    = ("void" | filled)
+//! named      = ident_start ident_cont*
+//! ```
+
 use crate::{
     env::EnvironmentRef,
     parser::{prelude::*, Code, Input, Span},
@@ -13,18 +37,21 @@ use crate::{
     },
 };
 
+/// A parameter in a lambda type.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Parameter {
+enum Parameter {
     Fixed(Type),
     Variadic(Type),
 }
 
-/// Parse a type from a string. Takes an error code offset as a parameter. All
-/// custom errors are reported with the given code offset and correspond to the
-/// `ERR_CONTEXT + offset` error domain.
+/// Parse a type from a string.
 ///
-/// This reverses the output of the `Type::to_string` method. It also is called
-/// by the `Type::from_str` method.
+/// Takes an error code offset as a parameter. All custom errors are reported
+/// with the given code offset and correspond to the `ERR_CONTEXT + offset`
+/// error domain.
+///
+/// This reverses the output of the `Type::to_string()` method. It also is
+/// called by the `Type::from_str()` method.
 ///
 /// # Grammar
 ///
@@ -52,9 +79,11 @@ pub fn parse<'a, 'b, const ECO: Code>(
     }
 }
 
-/// Parse a filled type from a string. Takes an error code offset as a
-/// parameter. All custom errors are reported with the given code offset and
-/// correspond to the `ERR_CONTEXT + offset` error domain.
+/// Parse a filled type from a string.
+///
+/// Takes an error code offset as a parameter. All custom errors are reported
+/// with the given code offset and correspond to the `ERR_CONTEXT + offset`
+/// error domain.
 ///
 /// # Grammar
 ///
@@ -137,9 +166,11 @@ pub fn parse_filled<'a, 'b, const ECO: Code>(
     }
 }
 
-/// Parse an array type from a string. Takes an error code offset as a
-/// parameter. All custom errors are reported with the given code offset and
-/// correspond to the `ERR_CONTEXT + offset` error domain.
+/// Parse an array type from a string.
+///
+/// Takes an error code offset as a parameter. All custom errors are reported
+/// with the given code offset and correspond to the `ERR_CONTEXT + offset`
+/// error domain.
 ///
 /// The maximum number of elements in an array is defined by the `ARRAY_MAX`
 ///
@@ -202,9 +233,11 @@ fn parse_array_len<const ECO: Code>(input: Input<'_>) -> ParseResult<'_, Option<
     })
 }
 
-/// Parse a pair type from a string. Takes an error code offset as a parameter.
-/// All custom errors are reported with the given code offset and correspond to
-/// the `ERR_CONTEXT + offset` error domain.
+/// Parse a pair type from a string.
+///
+/// Takes an error code offset as a parameter. All custom errors are reported
+/// with the given code offset and correspond to the `ERR_CONTEXT + offset`
+/// error domain.
 ///
 /// # Panics
 ///
@@ -238,9 +271,11 @@ pub fn parse_pair<'a, 'b, const ECO: Code>(
     }
 }
 
-/// Parse a lambda type from a string. Takes an error code offset as a
-/// parameter. All custom errors are reported with the given code offset and
-/// correspond to the `ERR_CONTEXT + offset` error domain.
+/// Parse a lambda type from a string.
+///
+/// Takes an error code offset as a parameter. All custom errors are reported
+/// with the given code offset and correspond to the `ERR_CONTEXT + offset`
+/// error domain.
 ///
 /// # Panics
 ///
@@ -250,7 +285,7 @@ pub fn parse_pair<'a, 'b, const ECO: Code>(
 /// # Grammar
 ///
 /// ```text
-/// lambda = "fn(" (arglist "->" rettype)? ")"
+/// lambda = "fn(" (param_list "->" rettype)? ")"
 pub fn parse_lambda<'a, 'b, const ECO: Code>(
     env: Option<EnvironmentRef<'a>>,
 ) -> impl Fn(Input<'b>) -> ParseResult<'b, Type> + 'a {
@@ -280,9 +315,11 @@ pub fn parse_lambda<'a, 'b, const ECO: Code>(
     }
 }
 
-/// Parse a return type from a string. Takes an error code offset as a
-/// parameter. All custom errors are reported with the given code offset and
-/// correspond to the `ERR_CONTEXT + offset` error domain.
+/// Parse a return type from a string.
+///
+/// Takes an error code offset as a parameter. All custom errors are reported
+/// with the given code offset and correspond to the `ERR_CONTEXT + offset`
+/// error domain.
 ///
 /// # Grammar
 ///
@@ -302,9 +339,11 @@ pub fn parse_rettype<'a, 'b, const ECO: Code>(
     }
 }
 
-/// Parse a parameter list from a string. Takes an error code offset as a
-/// parameter. All custom errors are reported with the given code offset and
-/// correspond to the `ERR_CONTEXT + offset` error domain.
+/// Parse a parameter list from a string.
+///
+/// Takes an error code offset as a parameter. All custom errors are reported
+/// with the given code offset and correspond to the `ERR_CONTEXT + offset`
+/// error domain.
 ///
 /// # Grammar
 ///
@@ -381,9 +420,11 @@ fn parse_arg<'a, 'b, const ECO: Code>(
     }
 }
 
-/// Parse a named type from a string. Takes an error code offset as a parameter.
-/// All custom errors are reported with the given code offset and correspond to
-/// the `ERR_CONTEXT + offset` error domain.
+/// Parse a named type from a string.
+///
+/// Takes an error code offset as a parameter. All custom errors are reported
+/// with the given code offset and correspond to the `ERR_CONTEXT + offset`
+/// error domain.
 ///
 /// # Grammar
 ///

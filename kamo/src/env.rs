@@ -1,3 +1,35 @@
+//! # Runtime environment of an interpreter
+//!
+//! This module is available when the `types` feature is enabled.
+//!
+//! The environment defines the scopes and bindings of an interpreter. The
+//! environment is used to store the bindings of variables and functions. During
+//! the execution or compilation of a program, the environment is used to lookup
+//! the bindings of variables and functions. The environment is also used to
+//! define new bindings.
+//!
+//! The [`TypeChecker`](crate::types::TypeChecker) uses the environment to store
+//! or to lookup the types of variables and functions.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use kamo::env::{Environment, EnvironmentRef};
+//! use kamo::mem::Mutator;
+//! use kamo::types::Type;
+//!
+//! let mut mutator = Mutator::new_ref();
+//! let mut env = Environment::new_ref(mutator.clone());
+//!
+//! // Define a binding in the global scope.
+//! let (level, index) = env.borrow_mut().define("x", Type::integer(), None);
+//!
+//! // Lookup the binding.
+//! let binding = env.borrow().lookup("x").unwrap();
+//! assert_eq!(binding.access(), (level, index));
+//! assert_eq!(binding.typedef(), &Type::integer());
+//! assert!(binding.value().is_none());
+//! ```
 use std::{cell::RefCell, collections::BTreeMap, ops::Deref, rc::Rc};
 
 use crate::{
@@ -5,6 +37,14 @@ use crate::{
     types::Type,
     value::Value,
 };
+
+/// The `Environmental` trait is implemented by types which have an environment
+/// associated with them. This is used to make it easier to pass around
+/// environments.
+pub trait Environmental<'a> {
+    /// Get a reference to the environment.
+    fn env(&self) -> EnvironmentRef<'a>;
+}
 
 /* #region EnvironmentRef */
 
@@ -25,12 +65,6 @@ impl<'a> Deref for EnvironmentRef<'a> {
 /* #endregion */
 
 /* #region Environment */
-
-/// The scope is a mapping from names to indices, types and optional values. The
-/// indices are used to access the bindings in the activation stack at
-/// run-time. The optional values are used to store the values of bindings
-/// which are known at compile-time.
-pub type Scope<'a> = BTreeMap<String, (u32, Type, Option<Value<'a>>)>;
 
 /// The environment is a stack of scopes. Each scope is a mapping from names to
 /// indices, types and optional values. The indices are used to access the
@@ -227,6 +261,12 @@ impl<'a> Default for Environment<'a> {
 
 /* #endregion */
 
+/// The scope is a mapping from names to indices, types and optional values. The
+/// indices are used to access the bindings in the activation stack at
+/// run-time. The optional values are used to store the values of bindings
+/// which are known at compile-time.
+pub type Scope<'a> = BTreeMap<String, (u32, Type, Option<Value<'a>>)>;
+
 /* #region ScopeGuard */
 
 /// This guard is used to push and pop scopes from the environment.
@@ -312,61 +352,6 @@ impl<'a> Binding<'a> {
     #[inline]
     pub const fn value(&self) -> Option<&Value<'a>> {
         self.value.as_ref()
-    }
-}
-
-/* #endregion */
-
-/* #region Parameters */
-
-/// Defines the parameters of a lambda expression.
-///
-/// * `positional` is a list of the positional parameters.
-/// * `variadic` is the name of the variadic parameter, if any.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct Parameters<'a> {
-    /// Positional parameters and their types.
-    pub fixed: Vec<(Pointer<'a, Box<str>>, Type)>,
-    /// Variadic parameter and its type if any.
-    pub variadic: Option<(Pointer<'a, Box<str>>, Type)>,
-}
-
-impl<'a> Parameters<'a> {
-    /// Return the number of parameters including the variadic parameter.
-    #[must_use]
-    #[inline]
-    pub fn len(&self) -> usize {
-        self.fixed.len() + usize::from(self.variadic.is_some())
-    }
-
-    /// Return `true` if there are no parameters.
-    #[must_use]
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.fixed.is_empty() && self.variadic.is_none()
-    }
-
-    /// Return `true` if there is a variadic parameter.
-    #[must_use]
-    #[inline]
-    pub const fn is_variadic(&self) -> bool {
-        self.variadic.is_some()
-    }
-
-    /// Define the parameters in a new scope. Returns a scope guard which pops
-    /// the scope when dropped.
-    #[must_use]
-    pub fn define(&self, env: &EnvironmentRef<'a>) -> ScopeGuard<'a> {
-        let guard = ScopeGuard::new(env.clone());
-        let mut env = env.borrow_mut();
-
-        for (name, typedef) in &self.fixed {
-            env.define(name.as_ref(), typedef.to_owned(), None);
-        }
-        if let Some((name, typedef)) = &self.variadic {
-            env.define(name.as_ref(), typedef.to_owned(), None);
-        }
-        guard
     }
 }
 

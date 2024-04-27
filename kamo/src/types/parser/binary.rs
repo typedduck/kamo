@@ -1,10 +1,43 @@
+//! # Type parser for binary encoded types
+//!
+//! This module provides functions to parse a binary encoded type into a
+//! [`Type`]. The binary encoding is a compact representation of a type that can
+//! be used to serialize and deserialize types.
+//!
+//! The binary encoding is a sequence of bytes that represents a type. The
+//! encoding is a simple grammar that can be parsed into a type. The grammar is
+//! defined as follows:
+//!
+//! ```text
+//! type     = (filled | option | code::VOID | code::NIL) eof
+//! filled   = code::ANY | union | specific
+//! specific = code::TYPE | code::BOOL | code::CHAR | code::INT
+//!          | code::FLOAT | code::SYMBOL | code::BINARY
+//!          | array | pair | lambda
+//! array    = code::ARRAY filled-or-option fixed
+//! pair     = code::PAIR filled-or-option filled-or-option
+//! lambda   = code::LAMBDA params variadic return
+//! params   = (filled-or-option)*
+//! variadic = (code::VARIADIC filled-or-option)?
+//! return   = code::RETURN (code::VOID | filled-or-option)
+//! option   = code::OPTION filled
+//! union    = code::UNION specific specific+ code::END
+//! fixed    = (fixed0 | fixed1 | fixed2 | fixed3 | fixed4)?
+//! fixed0   = code::FIXED0..=code::FIXED0_MAX
+//! fixed1   = code::FIXED1..=code::FIXED1_MAX byte
+//! fixed2   = code::FIXED2..=code::FIXED2_MAX byte byte
+//! fixed3   = code::FIXED3..=code::FIXED3_MAX byte byte byte
+//! fixed4   = code::FIXED4..=code::FIXED4_MAX byte byte byte byte
+//! byte     = 0x00..=0xFF
+//! ```
+
 use crate::types::Type;
 
 use super::{code, TypeCodeError};
 
-/// Parse a type code stream into a type. A type code stream is a sequence of
-/// bytes that represents a type. This function is called by the
-/// [`Type::new()`].
+/// Parse a type code stream into a type.
+///
+/// This function is called by the [`Type::new()`].
 ///
 /// # Errors
 ///
@@ -32,8 +65,7 @@ pub fn parse(src: &[u8]) -> Result<Type, TypeCodeError> {
     }
 }
 
-/// Parse a type code stream into a specific type. A type code stream is a
-/// sequence of bytes that represents a type.
+/// Parse a type code stream into a specific type.
 ///
 /// # Errors
 ///
@@ -66,8 +98,7 @@ pub fn parse_specific(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCo
         })
 }
 
-/// Parse a type code stream into a filled type. A type code stream is a
-/// sequence of bytes that represents a type.
+/// Parse a type code stream into a filled type.
 ///
 /// # Errors
 ///
@@ -100,8 +131,7 @@ pub fn parse_filled(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCode
         })
 }
 
-/// Parse a type code stream into a filled type or an option type. A type code
-/// stream is a sequence of bytes that represents a type.
+/// Parse a type code stream into a filled type or an option type.
 ///
 /// # Errors
 ///
@@ -136,8 +166,7 @@ fn expect_array(src: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCodeErr
         })
 }
 
-/// Parse a type code stream into an array type. A type code stream is a
-/// sequence of bytes that represents a type.
+/// Parse a type code stream into an array type.
 ///
 /// # Errors
 ///
@@ -174,8 +203,7 @@ fn expect_pair(src: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCodeErro
         })
 }
 
-/// Parse a type code stream into a pair type. A type code stream is a sequence
-/// of bytes that represents a type.
+/// Parse a type code stream into a pair type.
 ///
 /// # Errors
 ///
@@ -214,8 +242,7 @@ fn expect_lambda(input: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCode
         })
 }
 
-/// Parse a type code stream into a lambda type. A type code stream is a
-/// sequence of bytes that represents a type.
+/// Parse a type code stream into a lambda type.
 ///
 /// # Errors
 ///
@@ -231,20 +258,23 @@ fn expect_lambda(input: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCode
 /// # Grammar
 ///
 /// ```text
-/// lambda = code::LAMBDA args varg return
+/// lambda = code::LAMBDA params variadic return
 /// ```
 pub fn parse_lambda(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCodeError> {
     let (src, offset) = expect_lambda(src, offset)?;
-    let (args, cursor) = parse_args(src, offset)?;
-    let (varg, cursor) = parse_varg(cursor, offset + (src.len() - cursor.len()))?;
+    let (params, cursor) = parse_params(src, offset)?;
+    let (variadic, cursor) = parse_variadic(cursor, offset + (src.len() - cursor.len()))?;
     let (ret, cursor) = parse_return(cursor, offset + (src.len() - cursor.len()))?;
 
-    Ok((Type::lambda(args, varg, ret).expect("lambda type"), cursor))
+    Ok((
+        Type::lambda(params, variadic, ret).expect("lambda type"),
+        cursor,
+    ))
 }
 
-/// Parse a type code stream into a sequence of types. The sequence may be of
-/// zero length. A type code stream is a sequence of bytes that represents a
-/// type.
+/// Parse a type code stream into a sequence of parameters, which may filled or
+/// option types. The sequence may be of zero length. Parses until no more
+/// parameters can be found.
 ///
 /// # Errors
 ///
@@ -253,24 +283,23 @@ pub fn parse_lambda(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCode
 /// # Grammar
 ///
 /// ```text
-/// args = (filled-or-option)*
+/// params = (filled-or-option)*
 /// ```
-pub fn parse_args(src: &[u8], offset: usize) -> Result<(Vec<Type>, &[u8]), TypeCodeError> {
-    let mut args = Vec::new();
+pub fn parse_params(src: &[u8], offset: usize) -> Result<(Vec<Type>, &[u8]), TypeCodeError> {
+    let mut params = Vec::new();
     let mut offset = offset;
     let mut cursor = src;
 
     while let Ok((arg, rest)) = parse_filled_or_option(cursor, offset) {
-        args.push(arg);
+        params.push(arg);
         offset += cursor.len() - rest.len();
         cursor = rest;
     }
 
-    Ok((args, cursor))
+    Ok((params, cursor))
 }
 
-/// Parse a type code stream into an optional variadic type. A type code stream
-/// is a sequence of bytes that represents a type.
+/// Parse a type code stream into an optional variadic type.
 ///
 /// # Errors
 ///
@@ -279,9 +308,9 @@ pub fn parse_args(src: &[u8], offset: usize) -> Result<(Vec<Type>, &[u8]), TypeC
 /// # Grammar
 ///
 /// ```text
-/// varg = (code::VARIADIC filled-or-option)?
+/// variadic = (code::VARIADIC filled-or-option)?
 /// ```
-pub fn parse_varg(src: &[u8], offset: usize) -> Result<(Option<Type>, &[u8]), TypeCodeError> {
+pub fn parse_variadic(src: &[u8], offset: usize) -> Result<(Option<Type>, &[u8]), TypeCodeError> {
     if src.first().copied() == Some(code::VARIADIC) {
         let offset = offset + 1;
         let (arg, src) = parse_filled_or_option(&src[1..], offset)?;
@@ -301,12 +330,12 @@ fn expect_return(src: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCodeEr
         .ok_or(TypeCodeError::ExpectedReturn(offset))
 }
 
-/// Parse a type code stream into a return type. A type code stream is a
-/// sequence of bytes that represents a type.
+/// Parse a type code stream into a return type.
 ///
 /// # Errors
 ///
-/// If the type code stream is empty or is malformed, an error is returned.
+/// If the type code stream does not start with a return code, is empty or is
+/// malformed, an error is returned.
 ///
 /// # Grammar
 ///
@@ -334,12 +363,12 @@ fn expect_option(src: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCodeEr
         .ok_or(TypeCodeError::ExpectedOption(offset))
 }
 
-/// Parse a type code stream into an option type. A type code stream is a
-/// sequence of bytes that represents a type.
+/// Parse a type code stream into an option type.
 ///
 /// # Errors
 ///
-/// If the type code stream is empty or is malformed, an error is returned.
+/// If the type code stream is empty, does not start with an option code or is
+/// malformed, an error is returned.
 ///
 /// # Panics
 ///
@@ -380,12 +409,12 @@ fn expect_union_end(src: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCod
         .ok_or(TypeCodeError::ExpectedMemberOrEnd(offset))
 }
 
-/// Parse a type code stream into a union type. A type code stream is a
-/// sequence of bytes that represents a type.
+/// Parse a type code stream into a union type.
 ///
 /// # Errors
 ///
-/// If the type code stream is empty or is malformed, an error is returned.
+/// If the type code stream is empty, does not start with a union code or is
+/// malformed, an error is returned.
 ///
 /// # Panics
 ///
@@ -419,8 +448,7 @@ pub fn parse_union(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCodeE
     Ok((Type::union(members).expect("union type"), cursor))
 }
 
-/// Parse a type code stream into an optional fixed length value. A type code
-/// stream is a sequence of bytes that represents a type.
+/// Parse a type code stream into an optional fixed length value.
 ///
 /// # Errors
 ///

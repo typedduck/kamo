@@ -1,31 +1,51 @@
 use crate::{
-    env::{EnvironmentRef, Parameters, ScopeGuard},
+    env::{Environmental, ScopeGuard},
     mem::Pointer,
     parser::{Code, Input},
     types::{parser::text, Type},
     value::{self, Next, Value, ValueKind},
 };
 
-use super::{Result, TypeCheckError};
+use super::{Parameters, Result, TypeCheckError};
 
 /// This trait is used to implement a type checker for a specific language.
-pub trait TypeChecker<'a, const ECO: Code> {
-    /// Returns the current environment the type checker is operating on.
-    fn env(&self) -> EnvironmentRef<'a>;
-
+///
+/// The type checker is used to check the types of values in an AST. It is
+/// implemented for a specific language and is used to check the types of
+/// values in the AST of that language.
+///
+/// The main entry point of the type checker is the
+/// [`TypeChecker::check_expression()`] method. It is used to check the type of
+/// a single value in the AST. The method is called recursively to check the
+/// types of all values in the AST.
+///
+/// For a concrete implementation of a type checker for a specific language,
+/// the method [`TypeChecker::check_invocation()`] must be implemented. It is
+/// used to check the type of an invocation in the AST. An invocation has the
+/// form `(<operator> <operand> ...)`. The operator must be a symbol. The
+/// operands are not checked, but passed as-is. The type of the operands should
+/// be determined by calling [`TypeChecker::check_expression()`] recursively or
+/// according to the implementation of the operator, if it is for example a
+/// special form.
+///
+/// For a full implementation of a type checker for an imaginary language, see
+/// the tests in this module. The type checker is called `TestChecker` and is
+/// located in the `tests` module.
+pub trait TypeChecker<'a, const ECO: Code>: Environmental<'a> {
     /// Checks the type of the given invocation.
     ///
     /// An invocation has the form `(<operator> <operand> ...)`. The operator
     /// must be a symbol. The operands are not checked, but passed as-is. The
     /// type of the operands should be determined by calling
-    /// [`TypeChecker::expression()`] recursively or according to the
+    /// [`TypeChecker::check_expression()`] recursively or according to the
     /// implementation of the operator, if it is for example a special form.
     ///
     /// Returns the type of the invocation.
     ///
     /// Since everything in s-expressions is definied in terms of invocations,
-    /// this method is the main entry point of type checking for a specific
-    /// AST of a language. It must be implemented by the concrete type checker.
+    /// this method does the heavy lifting of type checking. It is the main
+    /// entry point of type checking for a specific AST of a language. It must
+    /// be implemented by the concrete type checker.
     ///
     /// In Scheme for example, the type checker would check against the
     /// syntax-rules of the special form and then check the types of the
@@ -41,25 +61,28 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// environment or is unknown, then an error is returned. If the operator is
     /// a known operator, but the operands do not match the expected types, then
     /// an error is returned.
-    fn invocation(&mut self, operator: Value<'a>, operands: &[Value<'a>]) -> Result<Type>;
+    fn check_invocation(&mut self, operator: Value<'a>, operands: &[Value<'a>]) -> Result<Type>;
 
     /// Returns the type of the given expression.
     ///
+    /// This is the main entry point of the type checker. It is used to check
+    /// the type of a single expression.
+    ///
     /// The expression is either a single value or a list of values. If it is a
     /// list, then it must have the form `(<operator> <operand> ...)` and is
-    /// passed to [`TypeChecker::invocation()`] for further processing. The
-    /// operands are not checked, but passed as-is. Checking of the operands is
-    /// deferred to [`TypeChecker::invocation()`].
+    /// passed to [`TypeChecker::check_invocation()`] for further processing.
+    /// The operands are not checked, but passed as-is. Checking of the operands
+    /// is deferred to [`TypeChecker::check_invocation()`].
     ///
     /// Symbols are resolved to their values before being passed recursively to
-    /// [`TypeChecker::expression()`].
+    /// [`TypeChecker::check_expression()`].
     ///
     /// # Errors
     ///
     /// If the expression is not a value or an invalid invocation, then an error
     /// is returned. If the expression is a symbol, but is not defined in the
     /// current environment, then an error is returned.
-    fn expression(&mut self, value: Value<'a>) -> Result<Type> {
+    fn check_expression(&mut self, value: Value<'a>) -> Result<Type> {
         match value.kind() {
             ValueKind::Nil => Ok(Type::nil()),
             ValueKind::Bool(_) => Ok(Type::boolean()),
@@ -79,7 +102,7 @@ pub trait TypeChecker<'a, const ECO: Code> {
                             pair = cursor.next();
                         }
                         Next::Nil => {
-                            return self.invocation(operator, &operands);
+                            return self.check_invocation(operator, &operands);
                         }
                         Next::Dot(_) => {
                             return Err(TypeCheckError::InproperList);
@@ -88,7 +111,7 @@ pub trait TypeChecker<'a, const ECO: Code> {
                 }
             }
             ValueKind::String(_, _) => Ok(Type::string()),
-            ValueKind::Symbol(_, _) => self.resolve(value),
+            ValueKind::Symbol(_, _) => self.resolve_symbol_type(value),
             ValueKind::Bytevec(_, _) => Ok(Type::binary()),
             ValueKind::Vector(_, _) => Ok(Type::vector()),
             ValueKind::Type(_, _) => Ok(Type::typedef()),
@@ -98,8 +121,8 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// Checks the type of the given declaration.
     ///
     /// The declaration has a declared type, which will be associated with the
-    /// given name in the current environment. The value is optional. If it is
-    /// given, then it is checked against the declared type.
+    /// given name in the current environment and scope. The value is optional.
+    /// If it is given, then it is checked against the declared type.
     ///
     /// Returns the declared type.
     ///
@@ -116,14 +139,14 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// If the value is given and is not a valid expression or the type does not
     /// match the declared type, then an error is returned.
-    fn declaration(
+    fn check_declaration(
         &mut self,
         name: impl AsRef<str>,
         declared: Type,
         value: Option<Value<'a>>,
     ) -> Result<Type> {
         if let Some(ref value) = value {
-            let inferred = self.expression(value.to_owned())?;
+            let inferred = self.check_expression(value.to_owned())?;
             self.expect_type(&inferred, &declared, value)?;
         }
 
@@ -139,19 +162,20 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// The operand is checked against the given list of allowed types. If the
     /// operand is not of any of the allowed types, then an error is returned.
     /// Otherwise, the type of the operand is returned. The type of the operand
-    /// is determined by calling [`TypeChecker::expression`] recursively.
+    /// is determined by calling [`TypeChecker::check_expression()`]
+    /// recursively.
     ///
     /// # Errors
     ///
     /// If the operand is not a valid expression or the type of the operand does
     /// not match any of the allowed types, then an error is returned.
-    fn operand(
+    fn check_operand(
         &mut self,
         operator: &Pointer<'a, Box<str>>,
         operand: Value<'a>,
         allowed: &[Type],
     ) -> Result<Type> {
-        let ty = self.expression(operand)?;
+        let ty = self.check_expression(operand)?;
 
         if allowed.contains(&ty) {
             Ok(ty)
@@ -169,17 +193,17 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// # Errors
     ///
-    /// If the variable is not defined in the current environment or the type of
-    /// the value does not match the declared type of the variable, then an
+    /// If the binding is not defined in the current environment or the type of
+    /// the value does not match the declared type of the binding, then an
     /// error is returned.
-    fn assignment(&mut self, name: impl AsRef<str>, value: Value<'a>) -> Result<Type> {
-        let variable = self
+    fn check_assignment(&mut self, name: impl AsRef<str>, value: Value<'a>) -> Result<Type> {
+        let binding = self
             .env()
             .borrow()
             .lookup(name.as_ref())
             .ok_or_else(|| TypeCheckError::UndefinedVariable(name.as_ref().to_owned()))?;
-        let declared = variable.typedef().clone();
-        let actual = self.expression(value.clone())?;
+        let declared = binding.typedef().clone();
+        let actual = self.check_expression(value.clone())?;
 
         self.expect_type(&actual, &declared, &value)?;
         Ok(actual)
@@ -189,7 +213,8 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// checked in a new scope. Returns the type of the last expression in the
     /// block. If the block is empty, then the type is `void`.
     ///
-    /// Calls [`TypeChecker::sequence()`] to check the expressions in the block.
+    /// Calls [`TypeChecker::check_sequence()`] to check the expressions in the
+    /// block.
     ///
     /// Variables declared in the block will not persist after the block has
     /// been checked.
@@ -198,9 +223,9 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// If any of the expressions in the block are not valid, then an error is
     /// returned.
-    fn block(&mut self, exprs: &[Value<'a>]) -> Result<Type> {
+    fn check_block(&mut self, exprs: &[Value<'a>]) -> Result<Type> {
         let _guard = ScopeGuard::new(self.env().clone());
-        self.sequence(exprs)
+        self.check_sequence(exprs)
     }
 
     /// Checks the type of the given sequence. Returns the type of the last
@@ -210,7 +235,7 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// # Note
     ///
-    /// As a side effect, variable declarations in the sequence are inserted
+    /// As a side effect, binding declarations in the sequence are inserted
     /// into the current scope. They may shadow or overwrite existing
     /// declarations. Declarations in the global scope will persist after the
     /// sequence has been checked.
@@ -219,11 +244,11 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// If any of the expressions in the sequence are not valid, then an error
     /// is returned.
-    fn sequence(&mut self, exprs: &[Value<'a>]) -> Result<Type> {
+    fn check_sequence(&mut self, exprs: &[Value<'a>]) -> Result<Type> {
         let mut ty = Type::void();
 
         for expr in exprs {
-            ty = self.expression(expr.to_owned())?;
+            ty = self.check_expression(expr.to_owned())?;
         }
 
         Ok(ty)
@@ -232,10 +257,10 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// Checks the type of the given lambda declaration. The parameters and body
     /// are checked in a new scope. Returns the type of the lambda.
     ///
-    /// Calls [`TypeChecker::parameter_list_declaration()`] to check the
-    /// parameters of the lambda. Calls [`TypeChecker::expression()`] to check
-    /// the body of the lambda. Calls [`TypeChecker::expect_return`] to check
-    /// the return type.
+    /// Calls [`TypeChecker::check_parameter_list()`] to check the
+    /// parameters of the lambda. Calls [`TypeChecker::check_expression()`] to
+    /// check the body of the lambda. Calls
+    /// [`TypeChecker::expect_return_type()`] to check the return type.
     ///
     /// Variables declared in the lambda will not persist after the lambda has
     /// been checked.
@@ -245,7 +270,7 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// If the parameters or the body of the lambda are not valid, then an error
     /// is returned. If the type of the body does not match the return type an
     /// error is returned.
-    fn lambda_declaration(
+    fn check_lambda(
         &mut self,
         params: Parameters<'a>,
         rettype: Type,
@@ -253,14 +278,14 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ) -> Result<Type> {
         // Set up the scope for the function body with the parameters
         let _guard = params.define(&self.env());
-        let body = self.expression(body.clone())?;
+        let body = self.check_expression(body.clone())?;
 
-        self.expect_return(&body, &rettype, "lambda")?;
+        self.expect_return_type(&body, &rettype, "lambda")?;
         Ok(Type::from((&params, &rettype)))
     }
 
-    /// Checks the type of the given parameter declarations. Returns the
-    /// parameters of the function as a [`Parameters`] struct.
+    /// Checks the type of the given parameter list. Returns the parameters of
+    /// the function as a [`Parameters`] struct.
     ///
     /// The paramaters are not inserted into the current scope. They are only
     /// checked for correctness. To add the parameters to a new scope, use
@@ -268,30 +293,30 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// Expects the parameters to be a list of parameter declarations. The list
     /// may be empty. Each parameter declaration is processed by
-    /// [`TypeChecker::parameter_declaration()`].
+    /// [`TypeChecker::check_parameter()`].
     ///
     /// # Errors
     ///
     /// If the parameter declarations are not valid, then an error is returned.
-    fn parameter_list_declaration(&self, params: Value<'a>) -> Result<Parameters<'a>> {
+    fn check_parameter_list(&self, params: Value<'a>) -> Result<Parameters<'a>> {
         let mut cursor = match params.kind() {
             ValueKind::Pair(_, pair) => Pointer::from(*pair),
             ValueKind::Nil => return Ok(Parameters::default()),
-            _ => return Err(TypeCheckError::MalformedParamDecls),
+            _ => return Err(TypeCheckError::MalformedParameterList),
         };
         let mut params = vec![];
         let mut varg = None;
 
         loop {
             let param = cursor.car().to_owned();
-            let (name, ty) = self.parameter_declaration(param)?;
+            let (name, ty) = self.check_parameter(param)?;
 
             params.push((name, ty));
             match cursor.next() {
                 Next::Pair(param) => cursor = param,
                 Next::Nil => break,
                 Next::Dot(param) => {
-                    let (name, ty) = self.parameter_declaration(param)?;
+                    let (name, ty) = self.check_parameter(param)?;
 
                     varg = Some((name, ty));
                     break;
@@ -317,7 +342,7 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// If the parameter is not a valid parameter declaration, then an error is
     /// returned.
-    fn parameter_declaration(&self, param: Value<'a>) -> Result<(Pointer<'a, Box<str>>, Type)> {
+    fn check_parameter(&self, param: Value<'a>) -> Result<(Pointer<'a, Box<str>>, Type)> {
         let param = param
             .as_pair_ptr()
             .ok_or_else(|| TypeCheckError::MalformedParameter)?;
@@ -341,24 +366,22 @@ pub trait TypeChecker<'a, const ECO: Code> {
         Ok((name, ty))
     }
 
-    /// Resolves the given symbol to its declared type. Considers the definition
-    /// of explicit types which are encoded as symbols. It than returns the
-    /// type [`Type::typedef()`]. If the symbol is not defined in the current
-    /// environment, then an error is returned.
+    /// Resolves the given symbol in the current environment, moving up the
+    /// scope chain if necessary. Returns the type of the associated binding.
     ///
     /// # Errors
     ///
     /// If the symbol is not a valid symbol or is not defined in the current
     /// environment, then an error is returned.
-    fn resolve(&self, value: Value<'a>) -> Result<Type> {
+    fn resolve_symbol_type(&self, value: Value<'a>) -> Result<Type> {
         let name = value.as_symbol_ptr().ok_or(TypeCheckError::NotASymbol)?;
-        let variable = self
+        let binding = self
             .env()
             .borrow()
             .lookup(name.as_ref())
             .ok_or_else(|| TypeCheckError::UndefinedVariable(name.as_ref().to_owned()))?;
 
-        Ok(variable.typedef().to_owned())
+        Ok(binding.typedef().to_owned())
     }
 
     /// Resolves the given symbol to a type by parsing its string value. If this
@@ -370,17 +393,18 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// # Errors
     ///
-    /// If the symbol is not a valid symbol or is not defined in the current
-    /// environment, then an error is returned.
+    /// If the symbol is not a valid symbol, is not defined in the current
+    /// environment or the string value cannot be parsed into a type, then an
+    /// error is returned.
     fn resolve_type(&self, value: Value<'a>) -> Result<Type> {
         let value = value.as_symbol_ptr().ok_or(TypeCheckError::NotASymbol)?;
-        let ty = self.parse_type(value.clone());
+        let ty = self.parse_type(&*value);
 
         if ty.is_err() {
-            let variable = self.env().borrow().lookup(value.as_ref());
+            let binding = self.env().borrow().lookup(value.as_ref());
 
-            if let Some(variable) = variable {
-                let ty = variable
+            if let Some(binding) = binding {
+                let ty = binding
                     .value()
                     .ok_or_else(|| TypeCheckError::UnboundVariable(value.as_ref().to_owned()))?;
 
@@ -402,7 +426,7 @@ pub trait TypeChecker<'a, const ECO: Code> {
     /// # Errors
     ///
     /// If the string value is not a valid type, then an error is returned.
-    fn parse_type(&self, value: Pointer<'a, Box<str>>) -> Result<Type> {
+    fn parse_type(&self, value: impl AsRef<str>) -> Result<Type> {
         let value = value.as_ref();
         let input = Input::new(value);
         let (ty, _) = text::parse::<ECO>(Some(self.env()))(input)?;
@@ -441,7 +465,12 @@ pub trait TypeChecker<'a, const ECO: Code> {
     ///
     /// If the actual return type does not match the expected return type, then
     /// an error is returned.
-    fn expect_return<'b>(&self, actual: &'b Type, expected: &Type, name: &str) -> Result<&'b Type> {
+    fn expect_return_type<'b>(
+        &self,
+        actual: &'b Type,
+        expected: &Type,
+        name: &str,
+    ) -> Result<&'b Type> {
         if actual == expected {
             Ok(actual)
         } else {
@@ -515,7 +544,7 @@ mod tests {
     use kamo_macros::{sexpr, sexpr_file};
 
     use crate::{
-        env::Environment,
+        env::{Environment, EnvironmentRef},
         mem::{Mutator, Pointer},
     };
 
@@ -538,11 +567,11 @@ mod tests {
                 env: Environment::new_ref(Mutator::new_ref()),
             };
 
-            tc.declaration("sum", "fn(int, int -> int)".parse().unwrap(), None)
+            tc.check_declaration("sum", "fn(int, int -> int)".parse().unwrap(), None)
                 .unwrap();
-            tc.declaration("square", "fn(int -> int)".parse().unwrap(), None)
+            tc.check_declaration("square", "fn(int -> int)".parse().unwrap(), None)
                 .unwrap();
-            tc.declaration("pi", "fn(void -> float)".parse().unwrap(), None)
+            tc.check_declaration("pi", "fn(void -> float)".parse().unwrap(), None)
                 .unwrap();
             tc
         }
@@ -566,7 +595,7 @@ mod tests {
                 .ok_or_else(|| TypeCheckError::NotAFunction(fntype.clone()))?;
             let args = operands
                 .iter()
-                .map(|operand| self.expression(operand.to_owned()))
+                .map(|operand| self.check_expression(operand.to_owned()))
                 .collect::<Result<Vec<_>>>()?;
 
             self.expect_arity(tag, fntype.params.len(), operands.len())?;
@@ -578,13 +607,20 @@ mod tests {
         }
     }
 
-    impl<'a> TypeChecker<'a, 0> for TestChecker<'a> {
+    impl<'a> Environmental<'a> for TestChecker<'a> {
+        #[inline]
         fn env(&self) -> EnvironmentRef<'a> {
             self.env.clone()
         }
+    }
 
+    impl<'a> TypeChecker<'a, 0> for TestChecker<'a> {
         #[allow(clippy::too_many_lines)]
-        fn invocation(&mut self, operator: Value<'a>, operands: &[Value<'a>]) -> Result<Type> {
+        fn check_invocation(
+            &mut self,
+            operator: Value<'a>,
+            operands: &[Value<'a>],
+        ) -> Result<Type> {
             if let Some(tag) = operator.as_symbol_ptr() {
                 match tag.as_ref() {
                     "+" | "-" | "*" | "/" => {
@@ -593,7 +629,7 @@ mod tests {
                         let allowed = Self::operator_types(tag.as_ref(), Operand::Multiple)?;
                         let opertypes = operands
                             .iter()
-                            .map(|operand| self.operand(&tag, operand.to_owned(), allowed))
+                            .map(|operand| self.check_operand(&tag, operand.to_owned(), allowed))
                             .collect::<Result<Vec<_>>>()?;
                         let mut iter = operands.iter().zip(opertypes.iter());
                         let (_, lhs_type) = iter.next().unwrap();
@@ -609,7 +645,7 @@ mod tests {
 
                         let opertypes = operands
                             .iter()
-                            .map(|operand| self.expression(operand.to_owned()))
+                            .map(|operand| self.check_expression(operand.to_owned()))
                             .collect::<Result<Vec<_>>>()?;
                         let mut iter = operands.iter().zip(opertypes.iter());
                         let (_, lhs_type) = iter.next().unwrap();
@@ -626,7 +662,7 @@ mod tests {
                         let (name, declared) = match operands[0].kind() {
                             ValueKind::Symbol(_, symbol) => (Pointer::from(*symbol), None),
                             ValueKind::Pair(_, _) => self
-                                .parameter_declaration(operands[0].clone())
+                                .check_parameter(operands[0].clone())
                                 .map(|(name, ty)| (name, Some(ty)))?,
                             _ => return Err(TypeCheckError::NotASymbol),
                         };
@@ -634,10 +670,10 @@ mod tests {
                         let declared = if let Some(declared) = declared {
                             declared
                         } else {
-                            self.expression(value.clone())?
+                            self.check_expression(value.clone())?
                         };
 
-                        self.declaration(&*name, declared, Some(value))
+                        self.check_declaration(&*name, declared, Some(value))
                     }
                     "set" => {
                         self.expect_arity(tag.as_ref(), 2, operands.len())?;
@@ -647,16 +683,16 @@ mod tests {
                             .ok_or(TypeCheckError::NotASymbol)?;
                         let value = operands[1].clone();
 
-                        self.assignment(&*name, value)
+                        self.check_assignment(&*name, value)
                     }
-                    "begin" => self.block(operands),
+                    "begin" => self.check_block(operands),
                     "if" => {
                         self.expect_min_arity(tag.as_ref(), 2, operands.len())?;
                         self.expect_max_arity(tag.as_ref(), 3, operands.len())?;
 
                         let opertypes = operands
                             .iter()
-                            .map(|operand| self.expression(operand.to_owned()))
+                            .map(|operand| self.check_expression(operand.to_owned()))
                             .collect::<Result<Vec<_>>>()?;
                         let mut iter = operands.iter().zip(opertypes.iter());
                         let (condition, condition_type) = iter.next().unwrap();
@@ -676,10 +712,10 @@ mod tests {
                         self.expect_min_arity(tag.as_ref(), 2, operands.len())?;
 
                         let condition = &operands[0];
-                        let condition_type = self.expression(operands[0].clone())?;
+                        let condition_type = self.check_expression(operands[0].clone())?;
 
                         self.expect_type(&condition_type, &Type::boolean(), condition)?;
-                        self.block(&operands[1..])
+                        self.check_block(&operands[1..])
                     }
                     "def" => {
                         self.expect_arity(tag.as_ref(), 5, operands.len())?;
@@ -688,7 +724,7 @@ mod tests {
                             .as_symbol_ptr()
                             .ok_or(TypeCheckError::NotASymbol)?
                             .clone();
-                        let params = self.parameter_list_declaration(operands[1].clone())?;
+                        let params = self.check_parameter_list(operands[1].clone())?;
                         let rettag = operands[2]
                             .as_symbol_ptr()
                             .ok_or(TypeCheckError::NotASymbol)?;
@@ -697,19 +733,19 @@ mod tests {
                         let body = operands[4].clone();
 
                         if rettag.as_ref() != "->" {
-                            return Err(TypeCheckError::MalformedReturnDecl);
+                            return Err(TypeCheckError::MalformedReturn);
                         }
 
                         // To allow recursive functions, we first declare the
                         // function. For the type checker we only need the
                         // the declared type.
-                        self.declaration(&*name, fntype, None)?;
-                        self.lambda_declaration(params, rettype, body)
+                        self.check_declaration(&*name, fntype, None)?;
+                        self.check_lambda(params, rettype, body)
                     }
                     "lambda" => {
                         self.expect_arity(tag.as_ref(), 4, operands.len())?;
 
-                        let params = self.parameter_list_declaration(operands[0].clone())?;
+                        let params = self.check_parameter_list(operands[0].clone())?;
                         let rettag = operands[1]
                             .as_symbol_ptr()
                             .ok_or(TypeCheckError::NotASymbol)?;
@@ -717,10 +753,10 @@ mod tests {
                         let body = operands[3].clone();
 
                         if rettag.as_ref() != "->" {
-                            return Err(TypeCheckError::MalformedReturnDecl);
+                            return Err(TypeCheckError::MalformedReturn);
                         }
 
-                        self.lambda_declaration(params, rettype, body)
+                        self.check_lambda(params, rettype, body)
                     }
                     "type" => {
                         self.expect_arity(tag.as_ref(), 2, operands.len())?;
@@ -732,15 +768,15 @@ mod tests {
                         let ty = self.resolve_type(operands[1].clone())?;
                         let ty = Value::new_type(self.env().borrow().mutator(), ty);
 
-                        self.declaration(name.as_ref(), Type::typedef(), Some(ty))
+                        self.check_declaration(name.as_ref(), Type::typedef(), Some(ty))
                     }
                     _ => {
-                        let fntype = self.resolve(operator.clone())?;
+                        let fntype = self.resolve_symbol_type(operator.clone())?;
                         self.invoke_call(tag.as_ref(), &fntype, operands)
                     }
                 }
             } else {
-                let fntype = self.expression(operator)?;
+                let fntype = self.check_expression(operator)?;
                 self.invoke_call("lambda", &fntype, operands)
             }
         }
@@ -775,22 +811,22 @@ mod tests {
         let m = tc.env().borrow().mutator().clone();
 
         let value = sexpr!(m, "#t");
-        assert_eq!(tc.expression(value), Ok(Type::boolean()));
+        assert_eq!(tc.check_expression(value), Ok(Type::boolean()));
 
         let value = sexpr!(m, r#"#\a"#);
-        assert_eq!(tc.expression(value), Ok(Type::character()));
+        assert_eq!(tc.check_expression(value), Ok(Type::character()));
 
         let value = sexpr!(m, r#"100"#);
-        assert_eq!(tc.expression(value), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(value), Ok(Type::integer()));
 
         let value = sexpr!(m, r#".5"#);
-        assert_eq!(tc.expression(value), Ok(Type::float()));
+        assert_eq!(tc.check_expression(value), Ok(Type::float()));
 
         let value = sexpr!(m, r#""Hello World!""#);
-        assert_eq!(tc.expression(value), Ok(Type::string()));
+        assert_eq!(tc.check_expression(value), Ok(Type::string()));
 
         let value = sexpr!(m, r#"#u8(1 2 3)"#);
-        assert_eq!(tc.expression(value), Ok(Type::binary()));
+        assert_eq!(tc.check_expression(value), Ok(Type::binary()));
     }
 
     #[test]
@@ -799,19 +835,19 @@ mod tests {
         let m = tc.env().borrow().mutator().clone();
 
         let list = sexpr!(m, "(+ 1 2 3)");
-        assert_eq!(tc.expression(list), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(list), Ok(Type::integer()));
 
         let list = sexpr!(m, "(- 1 2)");
-        assert_eq!(tc.expression(list), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(list), Ok(Type::integer()));
 
         let list = sexpr!(m, "(* 1 2)");
-        assert_eq!(tc.expression(list), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(list), Ok(Type::integer()));
 
         let list = sexpr!(m, "(/ 1 2)");
-        assert_eq!(tc.expression(list), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(list), Ok(Type::integer()));
 
         let list = sexpr!(m, r#"(+ "1" "2")"#);
-        assert_eq!(tc.expression(list), Ok(Type::string()));
+        assert_eq!(tc.check_expression(list), Ok(Type::string()));
     }
 
     #[test]
@@ -821,7 +857,7 @@ mod tests {
 
         let list = sexpr!(m, r#"(+ 1 "2" 3)"#);
         assert_eq!(
-            tc.expression(list),
+            tc.check_expression(list),
             Err(TypeCheckError::ExpectedType(
                 Type::integer(),
                 Type::string(),
@@ -831,7 +867,7 @@ mod tests {
 
         let list = sexpr!(m, r#"(- "1" "2")"#);
         assert_eq!(
-            tc.expression(list),
+            tc.check_expression(list),
             Err(TypeCheckError::UnexpectedOperatorType(
                 "-".to_owned(),
                 Type::string(),
@@ -841,7 +877,7 @@ mod tests {
 
         let list = sexpr!(m, r#"(- 1 "2")"#);
         assert_eq!(
-            tc.expression(list),
+            tc.check_expression(list),
             Err(TypeCheckError::UnexpectedOperatorType(
                 "-".to_owned(),
                 Type::string(),
@@ -851,7 +887,7 @@ mod tests {
 
         let list = sexpr!(m, r#"(- "1" 2)"#);
         assert_eq!(
-            tc.expression(list),
+            tc.check_expression(list),
             Err(TypeCheckError::UnexpectedOperatorType(
                 "-".to_owned(),
                 Type::string(),
@@ -861,43 +897,43 @@ mod tests {
     }
 
     #[test]
-    fn variables_success() {
+    fn bindings_success() {
         let mut tc = TestChecker::new();
         let m = tc.env().borrow().mutator().clone();
 
         let list = sexpr!(m, "(var a 1)");
-        assert_eq!(tc.expression(list), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(list), Ok(Type::integer()));
 
         let list = sexpr!(m, "(var b .5)");
-        assert_eq!(tc.expression(list), Ok(Type::float()));
+        assert_eq!(tc.check_expression(list), Ok(Type::float()));
 
         let list = sexpr!(m, "(var (c int) 100)");
-        assert_eq!(tc.expression(list), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(list), Ok(Type::integer()));
 
         let list = sexpr!(m, "(var (d float) .5)");
-        assert_eq!(tc.expression(list), Ok(Type::float()));
+        assert_eq!(tc.check_expression(list), Ok(Type::float()));
 
         let list = sexpr!(m, "a");
-        assert_eq!(tc.expression(list), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(list), Ok(Type::integer()));
 
         let list = sexpr!(m, "b");
-        assert_eq!(tc.expression(list), Ok(Type::float()));
+        assert_eq!(tc.check_expression(list), Ok(Type::float()));
 
         let list = sexpr!(m, "c");
-        assert_eq!(tc.expression(list), Ok(Type::integer()));
+        assert_eq!(tc.check_expression(list), Ok(Type::integer()));
 
         let list = sexpr!(m, "d");
-        assert_eq!(tc.expression(list), Ok(Type::float()));
+        assert_eq!(tc.check_expression(list), Ok(Type::float()));
     }
 
     #[test]
-    fn variables_failure() {
+    fn bindings_failure() {
         let mut tc = TestChecker::new();
         let m = tc.env().borrow().mutator().clone();
 
         let list = sexpr!(m, "(var (a int) .5)");
         assert_eq!(
-            tc.expression(list),
+            tc.check_expression(list),
             Err(TypeCheckError::ExpectedType(
                 Type::integer(),
                 Type::float(),
@@ -907,7 +943,7 @@ mod tests {
 
         let list = sexpr!(m, "(var (b float) 100)");
         assert_eq!(
-            tc.expression(list),
+            tc.check_expression(list),
             Err(TypeCheckError::ExpectedType(
                 Type::float(),
                 Type::integer(),
@@ -939,7 +975,7 @@ mod tests {
 
         for (n, (expr, expected)) in exprs.iter().zip(BLOCKS.iter()).enumerate() {
             assert_eq!(
-                tc.expression(expr.to_owned()),
+                tc.check_expression(expr.to_owned()),
                 Ok(expected.to_owned()),
                 "block expression {} failed",
                 n + 1
@@ -961,7 +997,7 @@ mod tests {
 
         for (n, (expr, expected)) in exprs.iter().zip(IFS.iter()).enumerate() {
             assert_eq!(
-                tc.expression(expr.to_owned()),
+                tc.check_expression(expr.to_owned()),
                 Ok(expected.to_owned()),
                 "if expression {} failed",
                 n + 1
@@ -983,7 +1019,7 @@ mod tests {
 
         for (n, (expr, expected)) in exprs.iter().zip(WHILES.iter()).enumerate() {
             assert_eq!(
-                tc.expression(expr.to_owned()),
+                tc.check_expression(expr.to_owned()),
                 Ok(expected.to_owned()),
                 "while expression {} failed",
                 n + 1
@@ -1024,7 +1060,7 @@ mod tests {
 
         for (n, (expr, expected)) in exprs.iter().zip(FUNCS.iter()).enumerate() {
             assert_eq!(
-                tc.expression(expr.to_owned()),
+                tc.check_expression(expr.to_owned()),
                 Ok(expected.to_owned()),
                 "user defined function {} failed",
                 n + 1
@@ -1046,7 +1082,7 @@ mod tests {
 
         for (n, (expr, expected)) in exprs.iter().zip(BUILTINS.iter()).enumerate() {
             assert_eq!(
-                tc.expression(expr.to_owned()),
+                tc.check_expression(expr.to_owned()),
                 Ok(expected.to_owned()),
                 "built-in function {} failed",
                 n + 1
@@ -1080,7 +1116,7 @@ mod tests {
 
         for (n, (expr, expected)) in exprs.iter().zip(LAMBDAS.iter()).enumerate() {
             assert_eq!(
-                tc.expression(expr.to_owned()),
+                tc.check_expression(expr.to_owned()),
                 Ok(expected.to_owned()),
                 "lambda function {} failed",
                 n + 1
@@ -1112,7 +1148,7 @@ mod tests {
 
         for (n, (expr, expected)) in exprs.iter().zip(TYPES.iter()).enumerate() {
             assert_eq!(
-                tc.expression(expr.to_owned()),
+                tc.check_expression(expr.to_owned()),
                 Ok(expected.to_owned()),
                 "type declaration {} failed",
                 n + 1

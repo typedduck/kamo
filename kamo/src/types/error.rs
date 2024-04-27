@@ -4,6 +4,7 @@ use std::{error::Error, fmt};
 
 use super::{Type, ARRAY_MAX};
 
+/// An error that occurs during type checking.
 #[derive(Clone, PartialEq, Eq)]
 pub enum TypeError {
     /// The size of a fixed array exceeds the maximum size. Takes the actual

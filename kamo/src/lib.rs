@@ -235,6 +235,36 @@
 //! }
 //! ```
 //!
+//! ## Type System
+//!
+//! The type system is available when the `types` feature is enabled. It is not
+//! enabled by default. When the type system is enabled the [`mod@env`] module is
+//! also available. It is used by the
+//! [`TypeChecker`](crate::types::TypeChecker).
+//!
+//! Types are defined by a type code which is a byte array. The type code is
+//! used to represent the type of a value. This allows for a simple and
+//! efficient way to represent types. The syntax of the type code is
+//! straightforward and easy to understand and parse. The type code allows the
+//! construction of complex types with multiple levels of nesting by combining
+//! simpler types.
+//!
+//! For more information see the [`types`] module.
+//!
+//! ## Environment
+//!
+//! The environment module is available when the `types` feature is enabled. It
+//! is not enabled by default.
+//!
+//! The environment defines the scopes and bindings of an interpreter. The
+//! environment is used to store the bindings of variables and functions. During
+//! the execution or compilation of a program, the environment is used to lookup
+//! the bindings of variables and functions. The environment is also used to
+//! define new bindings.
+//!
+//! The [`TypeChecker`](crate::types::TypeChecker) uses the environment to store
+//! or to lookup the types of variables and functions.
+//!
 //! ## Macros
 //!
 //! Macros are available when the `macros` feature is enabled. It is not
