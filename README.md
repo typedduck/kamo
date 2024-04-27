@@ -46,13 +46,13 @@ time.
     is done by a mark and sweep garbage collector.
 - [x] Module `kamo::value` for values. Values can either hold immediate values
     or pointers to values allocated in the mutator.
+- [x] Module `kamo::types` for types. The type system is used to infer the
+    types of the intermediate representation and the AST.
 - [ ] Module `kamo::eval` for evaluation. The evaluator processes an AST, which
     is an symbolic expression tree, and evaluates it to an intermediate
     representation. The intermediate representation can then be interpreted or
     compiled to a target representation. The interpreter is generic and can be
     used to interpret any intermediate representation.
-- [ ] Module `kamo::types` for types. The type system is used to infer the
-    types of the intermediate representation and the AST.
 - [ ] Module `kamo::repl` for a read-eval-print-loop. The REPL is used to
     interactively evaluate expressions and is generic and can be used to
     evaluate any intermediate representation.
