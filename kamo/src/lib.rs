@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! A library to assist in the creation of an interpreter or compiler and its
 //! associated runtime.
 //!
