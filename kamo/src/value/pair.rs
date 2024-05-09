@@ -187,9 +187,9 @@ impl<'a> Pair<'a> {
         let mut seen = HashSet::new();
         let mut tail = &self.tail;
 
-        seen.insert(self as *const Pair<'_> as usize);
+        seen.insert(std::ptr::from_ref::<Pair<'_>>(self) as usize);
         while let Some(pair) = tail.as_pair() {
-            let pair_ptr = pair as *const Pair<'_> as usize;
+            let pair_ptr = std::ptr::from_ref::<Pair<'_>>(pair) as usize;
 
             if seen.contains(&pair_ptr) {
                 return false;
@@ -207,9 +207,9 @@ impl<'a> Pair<'a> {
         let mut seen = HashSet::new();
         let mut tail = &self.tail;
 
-        seen.insert(self as *const Pair<'_> as usize);
+        seen.insert(std::ptr::from_ref::<Pair<'_>>(self) as usize);
         while let Some(pair) = tail.as_pair() {
-            let pair_ptr = pair as *const Pair<'_> as usize;
+            let pair_ptr = std::ptr::from_ref::<Pair<'_>>(pair) as usize;
 
             if seen.contains(&pair_ptr) {
                 return len;
@@ -243,8 +243,8 @@ impl<'a> Trace<'a> for Pair<'a> {
 impl<'a> PartialEq for Pair<'a> {
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        let lhs = (self as *const Self).cast::<u8>();
-        let rhs = (other as *const Self).cast::<u8>();
+        let lhs = std::ptr::from_ref::<Self>(self).cast::<u8>();
+        let rhs = std::ptr::from_ref::<Self>(other).cast::<u8>();
 
         if std::ptr::eq(lhs, rhs) {
             true

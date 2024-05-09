@@ -184,10 +184,10 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
         let mut tail = value.cdr();
 
         write!(self.0, "(")?;
-        seen.insert(value as *const Pair<'_> as usize);
+        seen.insert(std::ptr::from_ref::<Pair<'_>>(value) as usize);
         value.car().accept(self)?;
         while let Some(value) = tail.as_pair() {
-            let ptr = value as *const Pair<'_> as usize;
+            let ptr = std::ptr::from_ref::<Pair<'_>>(value) as usize;
 
             if seen.contains(&ptr) {
                 return write!(self.0, " <cyclic list>)");
@@ -224,13 +224,13 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
     }
 
     fn visit_vector(&mut self, value: &Vector<'_>) -> Self::Result {
-        let seen = value as *const Vector<'_> as usize;
+        let seen = std::ptr::from_ref::<Vector<'_>>(value) as usize;
 
         write!(self.0, "#(")?;
         if let Some((first, rest)) = value.split_first() {
             let ptr = first
                 .as_vector()
-                .map_or(0, |v| v as *const Vector<'_> as usize);
+                .map_or(0, |v| std::ptr::from_ref::<Vector<'_>>(v) as usize);
 
             if ptr == seen {
                 write!(self.0, "<cyclic vector>")?;
@@ -240,7 +240,7 @@ impl<'a, 'b> Visitor for SimplePrinterVisitor<'a, 'b> {
             for value in rest {
                 let ptr = value
                     .as_vector()
-                    .map_or(0, |v| v as *const Vector<'_> as usize);
+                    .map_or(0, |v| std::ptr::from_ref::<Vector<'_>>(v) as usize);
 
                 if ptr == seen {
                     write!(self.0, " <cyclic vector>")?;

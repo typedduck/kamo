@@ -29,7 +29,7 @@ pub enum LiteralError {
     Escape,
     /// Escape sequence part: ['"\\\\abednrt0] | x[0-7][0-9A-Fa-f] | u{{[0-9A-Fa-f]{{1-6}}}}
     EscapePart,
-    /// Quoted character: "'" ( <is_char_quotable> | EscapedChar ) "'"
+    /// Quoted character: `"'" ( <is_char_quotable> | EscapedChar ) "'"`
     QuotedChar,
 }
 
