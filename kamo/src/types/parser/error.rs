@@ -140,36 +140,42 @@ pub mod code {
 
     pub const ERR_TYPE: Code = ERR_CONTEXT + 0x0001;
     pub const ERR_FILLED_TYPE: Code = ERR_CONTEXT + 0x0002;
-    pub const ERR_MALFORMED_NAME: Code = ERR_CONTEXT + 0x0003;
-    pub const ERR_UNDEFINED_NAME: Code = ERR_CONTEXT + 0x0004;
-    pub const ERR_UNBOUND_NAME: Code = ERR_CONTEXT + 0x0005;
-    pub const ERR_EXPECTED_TYPE: Code = ERR_CONTEXT + 0x0006;
-    pub const ERR_NESTED_OPTION: Code = ERR_CONTEXT + 0x0007;
-    pub const ERR_ARRAY_LENGTH: Code = ERR_CONTEXT + 0x0008;
+    pub const ERR_PREDEFINED_TYPE: Code = ERR_CONTEXT + 0x0003;
+    pub const ERR_SPECIFIC_TYPE: Code = ERR_CONTEXT + 0x0004;
+    pub const ERR_MALFORMED_NAME: Code = ERR_CONTEXT + 0x0005;
+    pub const ERR_UNDEFINED_NAME: Code = ERR_CONTEXT + 0x0006;
+    pub const ERR_UNBOUND_NAME: Code = ERR_CONTEXT + 0x0007;
+    pub const ERR_EXPECTED_TYPE: Code = ERR_CONTEXT + 0x0008;
+    pub const ERR_NESTED_OPTION: Code = ERR_CONTEXT + 0x0009;
+    pub const ERR_ARRAY_LENGTH: Code = ERR_CONTEXT + 0x000a;
 }
 
 /// An error that occurs during type parsing.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, PartialEq, Eq)]
 pub enum TypeParseError {
-    /// Not a type.
-    NotAType,
-    /// Expecting a filled or named type.
-    NotAFilledType,
-    /// Malformed type name.
-    MalformedName,
-    /// Undefined type name.
-    UndefinedName(String),
-    /// Unbound type name.
-    UnboundName(String),
-    /// Expected a type.
-    ExpectedType(String, Type),
-    /// Nested option types are not supported.
-    NestedOption,
     /// Array length exceeds maximum.
     ArrayLength,
     /// Array length exceeds maximum.
     ArrayLengthCast,
+    /// Expected a type.
+    ExpectedType(String, Type),
+    /// Malformed type name.
+    MalformedName,
+    /// Nested option types are not supported.
+    NestedOption,
+    /// Expecting a filled or named type.
+    NotAFilledType,
+    /// Not a predefined type.
+    NotAPredefinedType,
+    /// Not a specific type.
+    NotASpecificType,
+    /// Not a type.
+    NotAType,
+    /// Unbound type name.
+    UnboundName(String),
+    /// Undefined type name.
+    UndefinedName(String),
 }
 
 impl Error for TypeParseError {}
@@ -177,21 +183,23 @@ impl Error for TypeParseError {}
 impl fmt::Display for TypeParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotAType => write!(f, "not a type"),
-            Self::NotAFilledType => write!(f, "expecting a filled or named type"),
-            Self::MalformedName => write!(f, "malformed type name"),
-            Self::UndefinedName(name) => write!(f, "undefined type name: {name}"),
-            Self::UnboundName(name) => write!(f, "unbound type name: {name}"),
-            Self::ExpectedType(name, declared) => {
-                write!(f, "expected that {name} is a type, got {declared}")
-            }
-            Self::NestedOption => write!(f, "nested option types are not supported"),
             Self::ArrayLength => {
                 write!(f, "array length exceeds maximum of {ARRAY_MAX} elements")
             }
             Self::ArrayLengthCast => {
                 write!(f, "array length exceeds maximum of {} elements", usize::MAX)
             }
+            Self::ExpectedType(name, declared) => {
+                write!(f, "expected that {name} is a type, got {declared}")
+            }
+            Self::MalformedName => write!(f, "malformed type name"),
+            Self::NestedOption => write!(f, "nested option types are not supported"),
+            Self::NotAFilledType => write!(f, "expecting a filled type"),
+            Self::NotAPredefinedType => write!(f, "expecting a predefined type"),
+            Self::NotASpecificType => write!(f, "expecting a specific type"),
+            Self::NotAType => write!(f, "not a type"),
+            Self::UnboundName(name) => write!(f, "unbound type name: {name}"),
+            Self::UndefinedName(name) => write!(f, "undefined type name: {name}"),
         }
     }
 }

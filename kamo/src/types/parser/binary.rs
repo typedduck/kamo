@@ -14,12 +14,12 @@
 //! specific = code::TYPE | code::BOOL | code::CHAR | code::INT
 //!          | code::FLOAT | code::SYMBOL | code::BINARY
 //!          | array | pair | lambda
-//! array    = code::ARRAY filled-or-option fixed
-//! pair     = code::PAIR filled-or-option filled-or-option
+//! array    = code::ARRAY filled-option fixed
+//! pair     = code::PAIR filled-option filled-option
 //! lambda   = code::LAMBDA params variadic return
-//! params   = (filled-or-option)*
-//! variadic = (code::VARIADIC filled-or-option)?
-//! return   = code::RETURN (code::VOID | filled-or-option)
+//! params   = (filled-option)*
+//! variadic = (code::VARIADIC filled-option)?
+//! return   = code::RETURN (code::VOID | filled-option)
 //! option   = code::OPTION filled
 //! union    = code::UNION specific specific+ code::END
 //! fixed    = (fixed0 | fixed1 | fixed2 | fixed3 | fixed4)?
@@ -141,9 +141,9 @@ pub fn parse_filled(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCode
 /// # Grammar
 ///
 /// ```text
-/// filled-or-option = filled | option
+/// filled-option = filled | option
 /// ```
-pub fn parse_filled_or_option(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCodeError> {
+pub fn parse_filled_option(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCodeError> {
     let first = src
         .first()
         .copied()
@@ -182,11 +182,11 @@ fn expect_array(src: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCodeErr
 /// # Grammar
 ///
 /// ```text
-/// array = code::ARRAY filled-or-option fixed
+/// array = code::ARRAY filled-option fixed
 /// ```
 pub fn parse_array(input: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCodeError> {
     let (cursor, offset) = expect_array(input, offset)?;
-    let (elem, cursor) = parse_filled_or_option(cursor, offset)?;
+    let (elem, cursor) = parse_filled_option(cursor, offset)?;
     let (size, src) = parse_fixed(cursor, offset + (input.len() - cursor.len()))?;
 
     Ok((Type::array(elem, size).expect("array type"), src))
@@ -219,13 +219,13 @@ fn expect_pair(src: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCodeErro
 /// # Grammar
 ///
 /// ```text
-/// pair = code::PAIR filled-or-option filled-or-option
+/// pair = code::PAIR filled-option filled-option
 /// ```
 #[allow(clippy::similar_names)]
 pub fn parse_pair(input: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCodeError> {
     let (cursor, offset) = expect_pair(input, offset)?;
-    let (car, cursor) = parse_filled_or_option(cursor, offset)?;
-    let (cdr, cursor) = parse_filled_or_option(cursor, offset + (input.len() - cursor.len()))?;
+    let (car, cursor) = parse_filled_option(cursor, offset)?;
+    let (cdr, cursor) = parse_filled_option(cursor, offset + (input.len() - cursor.len()))?;
 
     Ok((Type::pair(car, cdr).expect("pair taype"), cursor))
 }
@@ -283,14 +283,14 @@ pub fn parse_lambda(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCode
 /// # Grammar
 ///
 /// ```text
-/// params = (filled-or-option)*
+/// params = filled-option*
 /// ```
 pub fn parse_params(src: &[u8], offset: usize) -> Result<(Vec<Type>, &[u8]), TypeCodeError> {
     let mut params = Vec::new();
     let mut offset = offset;
     let mut cursor = src;
 
-    while let Ok((arg, rest)) = parse_filled_or_option(cursor, offset) {
+    while let Ok((arg, rest)) = parse_filled_option(cursor, offset) {
         params.push(arg);
         offset += cursor.len() - rest.len();
         cursor = rest;
@@ -308,12 +308,12 @@ pub fn parse_params(src: &[u8], offset: usize) -> Result<(Vec<Type>, &[u8]), Typ
 /// # Grammar
 ///
 /// ```text
-/// variadic = (code::VARIADIC filled-or-option)?
+/// variadic = (code::VARIADIC filled-option)?
 /// ```
 pub fn parse_variadic(src: &[u8], offset: usize) -> Result<(Option<Type>, &[u8]), TypeCodeError> {
     if src.first().copied() == Some(code::VARIADIC) {
         let offset = offset + 1;
-        let (arg, src) = parse_filled_or_option(&src[1..], offset)?;
+        let (arg, src) = parse_filled_option(&src[1..], offset)?;
 
         Ok((Some(arg), src))
     } else {
@@ -340,7 +340,7 @@ fn expect_return(src: &[u8], offset: usize) -> Result<(&[u8], usize), TypeCodeEr
 /// # Grammar
 ///
 /// ```text
-/// return = code::RETURN (code::VOID | filled-or-option)
+/// return = code::RETURN (code::VOID | filled-option)
 /// ```
 pub fn parse_return(src: &[u8], offset: usize) -> Result<(Type, &[u8]), TypeCodeError> {
     let (src, offset) = expect_return(src, offset)?;

@@ -146,7 +146,7 @@ impl Type {
     pub fn as_array(&self) -> Option<ArrayType> {
         if self.is_array() {
             let input = &self.0.as_slice()[1..];
-            let (elem, cursor) = binary::parse_filled_or_option(input, 0).expect("array elem-type");
+            let (elem, cursor) = binary::parse_filled_option(input, 0).expect("array elem-type");
             let (len, _) =
                 binary::parse_fixed(cursor, input.len() - cursor.len()).expect("array size");
 
@@ -301,8 +301,8 @@ impl Type {
     pub fn as_pair(&self) -> Option<PairType> {
         if self.is_pair() {
             let code = &self.0.as_slice()[1..];
-            let (car, code) = binary::parse_filled_or_option(code, 0).expect("pair car-type");
-            let (cdr, _) = binary::parse_filled_or_option(code, 0).expect("pair cdr-type");
+            let (car, code) = binary::parse_filled_option(code, 0).expect("pair car-type");
+            let (cdr, _) = binary::parse_filled_option(code, 0).expect("pair cdr-type");
 
             Some(PairType {
                 head: car,

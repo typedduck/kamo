@@ -1,5 +1,17 @@
 # Change Log
 
+## [0.9.4](https://github.com/typedduck/kamo/tree/kamo-v0.9.4) - 2024-05-26
+
+* FIX: Type parser for textual representation now parses union types. This was
+  missing in the previous implementation.
+* Refactor the type parser for textual representation.
+* Renamed `types::parser::binary::parse_filled_or_option` to
+  `parse_filled_option` for consistency with other parsers.
+
+## [0.9.3](https://github.com/typedduck/kamo/tree/kamo-v0.9.3) - 2024-04-28
+
+* Enable feature doc_cfg for docs.rs in `Cargo.toml` in crate `kamo`.
+
 ## [0.9.2](https://github.com/typedduck/kamo/tree/kamo-v0.9.2) - 2024-04-28
 
 * Add package metadata for `docs.rs` in `Cargo.toml` in crate `kamo`.
